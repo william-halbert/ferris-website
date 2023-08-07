@@ -100,6 +100,45 @@ function AudioToText() {
   const user = auth.currentUser;
   const db = getDatabase();
 
+  // Add these event handlers
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Use DataTransfer object to access the dragged files
+    let files = e.dataTransfer.files;
+
+    if (files.length > 0) {
+      const audioFile = files[0];
+      // Continue with the same logic you used for the file input onChange
+      const audioURL = URL.createObjectURL(audioFile);
+      setAudio(audioURL);
+      setAudioFileDetails(audioFile);
+
+      let audioElem = new Audio();
+      audioElem.src = audioURL;
+      audioElem.onloadedmetadata = () => {
+        let duration = audioElem.duration;
+        setAudioDuration(duration);
+      };
+    }
+  }
+
   const moveSelectedItemsToTrash = async () => {
     const movePromises = selectedItems.map((itemId) =>
       moveToTrash(user.uid, itemId)
@@ -325,6 +364,7 @@ function AudioToText() {
 
   const onAudioSubmit = async (event) => {
     // Get the file from the event
+    console.log("Started onAudioSubmit");
     if (
       event.target.elements.audio.files &&
       event.target.elements.audio.files.length > 0
@@ -335,15 +375,20 @@ function AudioToText() {
 
       const formData = new FormData();
       formData.append("audio", audioFile);
-
-      const response = await fetch("http://localhost:4000/transcribe", {
-        method: "POST",
-        body: formData,
-      });
+      let response;
+      try {
+        response = await fetch("http://localhost:4000/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+      } catch (error) {
+        console.error("Error while fetching transcription:", error);
+      }
 
       const result = await response.json();
       setTranscript(result.transcript);
       saveTranscript(user.uid, String(chatId), result);
+      console.log(transcript);
       /*const openAiResponse = await openaiRequest(
         `Summarize: ${result.transcript}`
       );*/
@@ -439,6 +484,7 @@ function AudioToText() {
                     const audioURL = URL.createObjectURL(audioFile);
                     setAudio(audioURL);
                     setAudioFileDetails(audioFile);
+
                     let audioElem = new Audio();
                     audioElem.src = audioURL;
                     audioElem.onloadedmetadata = () => {
@@ -462,6 +508,10 @@ function AudioToText() {
                   textAlign: "center",
                 }}
                 className="audio-input"
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
                 <h4
                   style={{
@@ -476,24 +526,24 @@ function AudioToText() {
               </label>
               {audioFileDetails && (
                 <div style={{ marginTop: "15px", textAlign: "center" }}>
-                  <p>
-                    <strong>File Name:</strong> {audioFileDetails.name}
+                  <p style={{ margin: "0 0 0 0" }}>
+                    <strong>File Name: </strong> {audioFileDetails.name}
                   </p>
+                  {/*
                   <p>
-                    <strong>File Type:</strong>
+                    <strong>File Type: </strong>
                     {audioFileDetails.type || "Unknown"}
                   </p>
                   <p>
-                    <strong>File Size:</strong>{" "}
+                    <strong>File Size: </strong>{" "}
                     {(audioFileDetails.size / (1024 * 1024)).toFixed(2)} MB
-                    {audioDuration && (
-                      <p>
-                        <strong>Duration:</strong>
-                        {Math.floor(audioDuration / 60)}:
-                        {(audioDuration % 60).toFixed(0).padStart(2, "0")} min
-                      </p>
-                    )}
-                  </p>
+              </p>*/}
+                  {audioDuration && (
+                    <p style={{ margin: "6px 0 0 0" }}>
+                      <strong>Duration: </strong>
+                      {Math.floor(audioDuration / 60)} min
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -507,7 +557,11 @@ function AudioToText() {
               Close
             </Button>
 
-            <Button variant="primary" className="no-focus" type="submit">
+            <Button
+              variant="primary"
+              className="no-focus"
+              onClick={onAudioSubmit}
+            >
               Start to transcribe
             </Button>
           </Modal.Footer>
@@ -1292,4 +1346,5 @@ function RootDropZone({ setItemParent, uid, setSidebar, style, setItems }) {
 
   return <div ref={drop} className="root-drop-zone" style={style}></div>;
 }
+
 export default AudioToText;

@@ -18,6 +18,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getDatabase } from "firebase/database";
 
 export default function Header() {
+  const Navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const auth = getAuth();
@@ -27,6 +28,7 @@ export default function Header() {
   async function handleLogout() {
     try {
       await logout();
+      Navigate("/");
     } catch (err) {
       console.log(err);
     }

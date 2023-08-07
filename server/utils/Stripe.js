@@ -37,7 +37,7 @@ router.post("/create-checkout-session", bodyParser.json(), async (req, res) => {
       ],
       payment_method_types: ["card"],
       mode: "payment",
-      success_url: `${domain}/success`,
+      success_url: `${domain}/my-credits`,
       cancel_url: `${domain}/my-credits`,
       metadata: { userId },
     });
@@ -51,7 +51,7 @@ router.post("/create-checkout-session", bodyParser.json(), async (req, res) => {
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }),
-  (req, res) => {
+  async (req, res) => {
     //console.log("webhook ran");
     let sig, event;
     try {
@@ -74,32 +74,32 @@ router.post(
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const userId = session.metadata.userId;
-      const amountCredited = session.amount_subtotal / 100;
-      // console.log("session: ", session, "userId: ", userId);
-      //  console.log("amountCredited: ", amountCredited);
-      const userRef = db.collection("users").doc(userId);
-      userRef
-        .get()
-        .then((doc) => {
-          if (doc.exists) {
-            console.log("Document data:", doc.data());
-          } else {
-            console.log("No such document!");
-          }
-        })
-        .catch((error) => {
-          console.error("Error getting document:", error);
-        });
-      userRef
-        .update({
-          credits: FieldValue.increment(amountCredited),
-        })
-        .then(() => {
-          console.log("Credits added successfully");
-        })
-        .catch((error) => {
-          console.error("Error adding credits: ", error);
-        });
+      const amountCredited = session.amount_subtotal;
+      console.log("session: ", session, "userId: ", userId);
+      console.log("amountCredited: ", amountCredited);
+
+      try {
+        // Create a reference to the Firestore document
+        const docRef = db.collection("users").doc(String(userId));
+        // Fetch the document
+        const docSnapshot = await docRef.get();
+
+        // Check if document exists
+        if (!docSnapshot.exists) {
+          console.error("Document doesn't exist");
+          return;
+        }
+        const docData = docSnapshot.data();
+        console.log(docData);
+
+        const currentCredits = docData.credits;
+        const newCredits = currentCredits + amountCredited;
+
+        // Set or merge data into that document
+        await docRef.set({ credits: newCredits }, { merge: true });
+      } catch (error) {
+        console.error("Error saving transcript to Firestore: ", error);
+      }
     }
 
     res.status(200).json({ received: true });

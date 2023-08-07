@@ -75,7 +75,7 @@ export default function Pricing() {
           ""
         )}
         <div style={sectionStyle}>
-          <h1 style={{ fontSize: "54px" }}>$0.01</h1>
+          <h1 style={{ fontSize: "54px" }}>$0.02</h1>
           <h2 style={{ fontSize: "30px", maxWidth: "250px" }}>
             per minute of audio
           </h2>
@@ -97,7 +97,7 @@ export default function Pricing() {
             boxShadow: "1px 1px 15px rgba(0,123,255, .8)",
           }}
         >
-          <h1 style={{ fontSize: "54px" }}>$0.12</h1>
+          <h1 style={{ fontSize: "54px" }}>$0.10</h1>
           <h2 style={{ fontSize: "30px", maxWidth: "250px" }}>per question</h2>
         </div>
       </div>

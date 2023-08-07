@@ -1,10 +1,29 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "./HeaderLanding";
 import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import Checkout from "./Checkout";
+import { getAuth } from "firebase/auth";
+import { useAuth } from "../contexts/AuthContext";
+import { getDatabase } from "firebase/database";
 
 export default function MyCredits() {
   const [amount, setAmount] = useState(5);
+  const [credits, setCredits] = useState(null);
+
+  const { getUser } = useAuth();
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const db = getDatabase();
+
+  useEffect(() => {
+    getUser(user.uid).then((userData) => {
+      console.log(userData);
+      if (userData) {
+        setCredits(userData.credits / 100);
+        console.log("Set Credits to ", userData.credits / 100);
+      }
+    });
+  }, []);
   return (
     <>
       <Header />
@@ -25,20 +44,30 @@ export default function MyCredits() {
           >
             Your Profile
           </h1>
-          <h1
-            style={{
-              fontSize: "28px",
-            }}
-          >
-            <span
+          {credits || credits == 0 ? (
+            <h1
               style={{
-                color: "#007BFF",
+                fontSize: "28px",
               }}
             >
-              $3.84
-            </span>{" "}
-            of credits remaining
-          </h1>
+              <span
+                style={{
+                  color: "#007BFF",
+                }}
+              >
+                ${credits.toFixed(2)}
+              </span>{" "}
+              of credits remaining
+            </h1>
+          ) : (
+            <h1
+              style={{
+                fontSize: "28px",
+              }}
+            >
+              Loading Data about your credits
+            </h1>
+          )}
           <h2
             style={{
               fontSize: "36px",

@@ -1,4 +1,4 @@
-import AudioToText from "./audioToTextAug1";
+import AudioToText from "./audioToTextAug5";
 import Signup from "./Signup";
 import Login from "./Login";
 import ForgotPassword from "./ForgotPassword";

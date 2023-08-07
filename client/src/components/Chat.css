@@ -40,3 +40,11 @@
 .audio-input {
   border: 2px solid gray;
 }
+.transcript-header .modal-title {
+  margin: 0 auto 0 32%;
+}
+.transcript-tab:hover,
+.transcript-summary-tab:hover {
+  background: rgb(204, 204, 204) !important;
+  cursor: pointer;
+}

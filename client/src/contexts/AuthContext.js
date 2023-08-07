@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  function logout(email, password) {
+  function logout() {
     try {
       signOut(auth);
     } catch (err) {
@@ -77,6 +77,21 @@ export function AuthProvider({ children }) {
       console.error("Error saving transcript to Firestore: ", error);
     }
   }
+
+  async function saveTranscriptSummary(uid, chatId, summary) {
+    try {
+      await setDoc(
+        doc(db, "users", uid, "foldersAndChats", chatId),
+        {
+          transcriptSummary: summary,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving transcript to Firestore: ", error);
+    }
+  }
+
   async function saveItemName(uid, chatId, name) {
     try {
       await setDoc(
@@ -132,6 +147,46 @@ export function AuthProvider({ children }) {
       console.error("Error saving conversation to Firestore: ", error);
     }
   }
+
+  async function saveFolderIsOpen(uid, chatId, isOpen) {
+    try {
+      await setDoc(
+        doc(db, "users", uid, "foldersAndChats", chatId),
+        {
+          isOpen: isOpen,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving conversation to Firestore: ", error);
+    }
+  }
+
+  async function removeCredits(uid, amount) {
+    try {
+      const userDocRef = doc(db, "users", uid);
+
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) {
+        console.error("User does not exist!");
+        return;
+      }
+      const currentCredits = userDocSnap.data().credits || 0;
+
+      const newCredits = currentCredits - amount;
+
+      await setDoc(
+        doc(db, "users", uid),
+        {
+          credits: newCredits,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error updating credits in Firestore: ", error);
+    }
+  }
+
   async function setItemParent(uid, chatId, parentId) {
     try {
       await setDoc(
@@ -144,6 +199,17 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error("Error saving conversation to Firestore: ", error);
     }
+  }
+  async function getUser(uid) {
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such document!");
+    }
+    return docSnap.data();
   }
 
   async function getChat(uid, chatId) {
@@ -172,13 +238,14 @@ export function AuthProvider({ children }) {
     parentId = null
   ) {
     const docData = {
-      userId: uid,
+      userId: String(uid),
       name: name,
       type: type,
       createdDate: Timestamp.fromDate(new Date()),
       parentId: parentId,
-      itemId: itemId,
+      itemId: String(itemId),
       status: "Live",
+      isOpen: true,
     };
     try {
       const docRef = await setDoc(
@@ -192,13 +259,13 @@ export function AuthProvider({ children }) {
   }
   async function createUser(uid, email) {
     const docData = {
-      userId: uid,
+      userId: String(uid),
       createdDate: Timestamp.fromDate(new Date()),
-      credits: 20,
+      credits: 0,
       email: email,
     };
     try {
-      const docRef = await setDoc(doc(db, "users", uid), docData);
+      const docRef = await setDoc(doc(db, "users", String(uid)), docData);
     } catch (e) {
       console.error(e);
     }
@@ -240,6 +307,10 @@ export function AuthProvider({ children }) {
     moveToTrash,
     moveToLive,
     saveItemName,
+    saveTranscriptSummary,
+    removeCredits,
+    getUser,
+    saveFolderIsOpen,
   };
 
   return (

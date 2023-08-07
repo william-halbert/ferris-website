@@ -19,7 +19,12 @@ app.post(
   upload.single("audio"),
   async (req, res) => {
     try {
-      const transcript = await transcribeAudioFile(req.file.path);
+      const transcript = await transcribeAudioFile(
+        req.file.path,
+        req.body.userId,
+        req.body.chatId,
+        req.file.mimetype
+      );
       res.json({ transcript: transcript });
     } catch (err) {
       console.log(err);
@@ -28,7 +33,7 @@ app.post(
   }
 );
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

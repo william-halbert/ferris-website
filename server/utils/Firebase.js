@@ -1,15 +1,18 @@
 const admin = require("firebase-admin");
-require("dotenv").config();
-
-const serviceAccount = require(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+const serviceAccount = require("../firebaseKey.json");
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://audio-to-text-7ecf6-default-rtdb.firebaseio.com/",
+  credentials: admin.credential.cert(serviceAccount),
+  databaseURL: "https://audio-to-text-7ecf6-default-rtdb.firebaseio.com",
 });
 
 const db = admin.firestore();
 
-module.exports = {
-  db,
-};
+if (admin.apps.length) {
+  console.log("Firebase Admin SDK initialized successfully!");
+  console.log("Using Firebase Project ID:", serviceAccount.project_id);
+} else {
+  console.error("Failed to initialize Firebase Admin SDK.");
+}
+
+module.exports = db;
