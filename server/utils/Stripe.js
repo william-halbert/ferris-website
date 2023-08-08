@@ -3,7 +3,7 @@ const Stripe = require("stripe");
 require("dotenv").config();
 const morgan = require("morgan");
 const db = require("./Firebase");
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY_LIVE);
 const { FieldValue } = require("firebase/firestore");
 const bodyParser = require("body-parser");
 
@@ -17,7 +17,7 @@ router.post("/create-checkout-session", bodyParser.json(), async (req, res) => {
   const amount = req.body.amount * 100;
   const userId = req.body.userId;
 
-  const domain = "http://localhost:3000";
+  const domain = "https://audio-to-text-7ecf6.firebaseapp.com";
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -26,9 +26,9 @@ router.post("/create-checkout-session", bodyParser.json(), async (req, res) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Add $${
-                amount / 100
-              } credits to your Chat With Notes By Willful Works account`,
+              name: `Add $${(amount / 100).toFixed(
+                2
+              )} of credits to your Chat With Notes By Willful Works account`,
             },
             unit_amount: amount,
           },

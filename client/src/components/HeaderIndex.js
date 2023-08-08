@@ -26,7 +26,7 @@ export default function Header() {
 
   useEffect(() => {
     const checkPosition = () => {
-      if (window.scrollY > window.innerHeight) {
+      if (window.scrollY > window.innerHeight - 200) {
         setHideHeaderItems(true);
         console.log("below 100vh");
       } else {
@@ -355,9 +355,12 @@ function Signup(props) {
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
-
+  const [confirmedTerms, setConfirmedTerms] = useState(false);
   async function handleSignUp(e) {
     e.preventDefault();
+    if (!confirmedTerms) {
+      return setError("Accept the terms and conditions to sign up.");
+    }
     if (passwordRef.current.value !== passwordConfirmationRef.current.value) {
       return setError("Passwords do not match.");
     }
@@ -403,6 +406,18 @@ function Signup(props) {
                 type="password"
                 ref={passwordConfirmationRef}
                 required
+              />
+            </Form.Group>
+            <Form.Group id="terms-confirmation" style={{ marginTop: "12px" }}>
+              <Form.Check
+                type="checkbox"
+                label={
+                  <>
+                    I have read and accept the{" "}
+                    <Link to="/terms-and-conditions">terms and conditions</Link>
+                  </>
+                }
+                onChange={(e) => setConfirmedTerms(e.target.checked)}
               />
             </Form.Group>
             <Button disabled={loading} className="w-100 mt-3" type="submit">

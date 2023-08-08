@@ -1,7 +1,9 @@
-import AudioToText from "./audioToTextAug5";
+import AudioToText from "./chatAug7";
 import Signup from "./Signup";
 import Login from "./Login";
 import ForgotPassword from "./ForgotPassword";
+import Terms from "./Terms";
+import Privacy from "./Privacy";
 import { db } from "../firebase";
 import { Container } from "react-bootstrap";
 import { AuthProvider } from "../contexts/AuthContext";
@@ -31,6 +33,9 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/terms-and-conditions" element={<Terms />} />
+              <Route path="/privacy-policy" element={<Privacy />} />
+
               <Route
                 path="/chat"
                 element={

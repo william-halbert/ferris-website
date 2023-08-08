@@ -99,10 +99,9 @@ export default function MyCredits() {
                 onChange={(e) => setAmount(Number(e.target.value))}
               >
                 {" "}
-                <option value="5">$5</option>
                 <option value="10">$10</option>
                 <option value="20">$20</option>
-                <option value="30">$30</option>
+                <option value="30">$50</option>
               </select>
 
               <Checkout amount={amount} />

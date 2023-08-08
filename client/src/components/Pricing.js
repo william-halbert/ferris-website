@@ -2,7 +2,7 @@ import React from "react";
 import Header from "./HeaderLanding";
 
 export default function Pricing() {
-  const giveCredits = false;
+  const giveCredits = true;
   const sectionStyle = {
     display: "flex",
     flexDirection: "column",
@@ -67,7 +67,7 @@ export default function Pricing() {
             >
               <h1 style={{ fontSize: "54px" }}>Free</h1>
               <h2 style={{ fontSize: "30px", maxWidth: "250px" }}>
-                $3 in credit upon signing up
+                $0.50 in credit upon signing up
               </h2>
             </div>
           </>
@@ -85,20 +85,22 @@ export default function Pricing() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            padding: "24px",
             borderRadius: "25px",
-            minWidth: "15vw",
-            justifyContent: "start",
+            justifyContent: "center",
             margin: "24px",
-            paddingTop: "10vh",
-            paddingBottom: "10vh",
+
             textAlign: "center",
             padding: "10vh 5vw",
             boxShadow: "1px 1px 15px rgba(0,123,255, .8)",
+            width: "400px",
           }}
         >
-          <h1 style={{ fontSize: "54px" }}>$0.10</h1>
-          <h2 style={{ fontSize: "30px", maxWidth: "250px" }}>per question</h2>
+          <div>
+            <h1 style={{ fontSize: "36px " }}>$0.005 /</h1>
+            <h1 style={{ fontSize: "24px " }}>1k tokens input</h1>
+            <h1 style={{ fontSize: "36px ", marginTop: "24px" }}>$0.007 /</h1>
+            <h1 style={{ fontSize: "24px" }}>1k tokens output</h1>
+          </div>
         </div>
       </div>
     </>

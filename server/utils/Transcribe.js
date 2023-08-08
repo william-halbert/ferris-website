@@ -5,7 +5,8 @@ const fs = require("fs");
 const { setDoc, doc } = require("firebase/firestore");
 const ffmpeg = require("fluent-ffmpeg");
 
-ffmpeg.setFfmpegPath("/usr/local/opt/ffmpeg/bin/ffmpeg");
+//ffmpeg.setFfmpegPath("/usr/local/opt/ffmpeg/bin/ffmpeg");
+//ffmpeg.setFfmpegPath("/app/.heroku/ffmpeg/bin/ffmpeg");
 
 async function transcribeAudioFile(filename, userId, chatId, mimetype) {
   console.log("chatId", chatId);

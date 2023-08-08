@@ -8,7 +8,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { getAuth } from "firebase/auth";
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_KEY);
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_KEY_LIVE);
 
 function CheckoutForm({ amount }) {
   const auth = getAuth();
@@ -19,13 +19,16 @@ function CheckoutForm({ amount }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const response = await fetch("/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ amount: amount, userId: user.uid }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_SERVER}/stripe/create-checkout-session`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ amount: amount, userId: user.uid }),
+        }
+      );
       const data = await response.json();
 
       console.log("Frontend received:", data);

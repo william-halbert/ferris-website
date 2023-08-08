@@ -6,15 +6,37 @@ import { getAuth } from "firebase/auth";
 import { useAuth } from "../contexts/AuthContext";
 import { getDatabase } from "firebase/database";
 import { Link, useNavigate } from "react-router-dom";
-import { Card, Form, Button, Alert } from "react-bootstrap";
+import { Card, Form, Button, Alert, Modal } from "react-bootstrap";
+import Footer from "./Footer";
 
 export default function Index() {
   const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
+  const [hideHeaderItems, setHideHeaderItems] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const demoSectionRef = useRef(null);
+
   return (
     <>
       <Header />
+      {showLoginModal && (
+        <Login
+          showLoginModal={showLoginModal}
+          setShowLoginModal={setShowLoginModal}
+          showSignupModal={showSignupModal}
+          setShowSignupModal={setShowSignupModal}
+        />
+      )}
+      {showSignupModal && (
+        <Signup
+          showLoginModal={showLoginModal}
+          setShowLoginModal={setShowLoginModal}
+          showSignupModal={showSignupModal}
+          setShowSignupModal={setShowSignupModal}
+        />
+      )}
       <div style={{ marginTop: "86px", marginBottom: "20vh" }}>
         {/* Hero section */}
         <section style={{ display: "flex", justifyContent: "space-between" }}>
@@ -42,16 +64,21 @@ export default function Index() {
                   minHeight: "unset",
                 }}
                 onClick={() => {
+                  const user = auth.currentUser;
                   if (user) {
                     navigate("/chat");
                   } else {
-                    navigate("/signup");
+                    setShowLoginModal(false);
+                    setShowSignupModal(true);
                   }
                 }}
               >
-                Get Started
+                {user ? "Chat" : "Get Started"}
               </button>
               <h2
+                onClick={() =>
+                  demoSectionRef.current.scrollIntoView({ behavior: "smooth" })
+                }
                 style={{
                   fontSize: "30px",
                   padding: "10px 20px",
@@ -59,6 +86,7 @@ export default function Index() {
                   color: "#007BFF",
                   borderRadius: "8px",
                   border: "none",
+                  cursor: "pointer",
                 }}
               >
                 See demos below
@@ -74,6 +102,7 @@ export default function Index() {
 
         {/* 1st demo section */}
         <section
+          ref={demoSectionRef}
           style={{
             marginTop: "15vh",
             display: "flex",
@@ -114,6 +143,182 @@ export default function Index() {
           />
         </section>
       </div>
+      <Footer />
+    </>
+  );
+}
+
+function Login(props) {
+  const {
+    showLoginModal,
+    setShowLoginModal,
+    showSignupModal,
+    setShowSignupModal,
+  } = props;
+  const emailRef = useRef();
+  const passwordRef = useRef();
+  const passwordConfirmationRef = useRef();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    try {
+      setError("");
+      setLoading(true);
+      await login(emailRef.current.value, passwordRef.current.value);
+      setShowLoginModal(false);
+    } catch (err) {
+      console.log(err);
+      setError("Failed to log in.");
+    }
+    setLoading(false);
+  }
+  return (
+    <>
+      <Modal
+        show={showLoginModal}
+        onHide={() => {
+          setShowLoginModal(false);
+          setShowSignupModal(false);
+        }}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Log In</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {error && <Alert variant="danger">{error}</Alert>}
+          <Form onSubmit={handleLogin}>
+            <Form.Group id="email">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" ref={emailRef} required />
+            </Form.Group>
+            <Form.Group id="password">
+              <Form.Label>Password</Form.Label>
+              <Form.Control type="password" ref={passwordRef} required />
+            </Form.Group>
+            <Button disabled={loading} className="w-100 mt-3" type="submit">
+              Log In
+            </Button>
+          </Form>
+          <div className="w-100 text-center mt-3">
+            <Link to="/forgot-password">Forgot password?</Link>
+          </div>
+
+          <div
+            className="w-100 text-center mt-2"
+            onClick={() => {
+              setShowLoginModal(false);
+              setShowSignupModal(true);
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            Need an account? <Link>Sign Up</Link>
+          </div>
+        </Modal.Body>
+      </Modal>
+    </>
+  );
+}
+
+function Signup(props) {
+  const {
+    showLoginModal,
+    setShowLoginModal,
+    showSignupModal,
+    setShowSignupModal,
+  } = props;
+  const emailRef = useRef();
+  const passwordRef = useRef();
+  const passwordConfirmationRef = useRef();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signup } = useAuth();
+  const navigate = useNavigate();
+  const [confirmedTerms, setConfirmedTerms] = useState(false);
+  async function handleSignUp(e) {
+    e.preventDefault();
+    if (!confirmedTerms) {
+      return setError("Accept the terms and conditions to sign up.");
+    }
+    if (passwordRef.current.value !== passwordConfirmationRef.current.value) {
+      return setError("Passwords do not match.");
+    }
+    try {
+      setError("");
+      setLoading(true);
+      await signup(emailRef.current.value, passwordRef.current.value);
+      setShowSignupModal(false);
+    } catch (err) {
+      console.log(err);
+      setError("Failed to set up an account.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <Modal
+        show={showSignupModal}
+        onHide={() => {
+          setShowLoginModal(false);
+          setShowSignupModal(false);
+        }}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Sign Up</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          {error && <Alert variant="danger">{error}</Alert>}
+          <Form onSubmit={handleSignUp}>
+            <Form.Group id="email">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" ref={emailRef} required />
+            </Form.Group>
+            <Form.Group id="password">
+              <Form.Label>Password</Form.Label>
+              <Form.Control type="password" ref={passwordRef} required />
+            </Form.Group>
+            <Form.Group id="password-confirmation">
+              <Form.Label>Password Confirmation</Form.Label>
+              <Form.Control
+                type="password"
+                ref={passwordConfirmationRef}
+                required
+              />
+            </Form.Group>
+            <Form.Group id="terms-confirmation" style={{ marginTop: "12px" }}>
+              <Form.Check
+                type="checkbox"
+                label={
+                  <>
+                    I have read and accept the{" "}
+                    <Link to="/terms-and-conditions">terms and conditions</Link>
+                  </>
+                }
+                onChange={(e) => setConfirmedTerms(e.target.checked)}
+              />
+            </Form.Group>
+            <Button disabled={loading} className="w-100 mt-3" type="submit">
+              Sign Up
+            </Button>
+          </Form>
+
+          <div
+            className="w-100 text-center mt-2"
+            onClick={() => {
+              setShowLoginModal(true);
+              setShowSignupModal(false);
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            Already have an account? <Link>Log In</Link>
+          </div>
+        </Modal.Body>
+      </Modal>
     </>
   );
 }

@@ -5,5 +5,5 @@ import { Route, Navigate } from "react-router-dom";
 export default function PrivateRoute({ children }) {
   const auth = getAuth();
   const user = auth.currentUser;
-  return user ? children : <Navigate to="/login" replace />;
+  return user ? children : <Navigate to="/" replace />;
 }

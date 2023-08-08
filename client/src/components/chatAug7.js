@@ -187,11 +187,27 @@ function AudioToText() {
       setSelectedItems((prevItems) => [...prevItems, strItem]);
     }
   };
+  /*
+  useEffect(async () => {
+    if (transcript) {
+      // or some other condition to ensure transcript is set
+      const chatData = await getChat(user.uid, String(chatId));
+      if (transcriptSummary) {
+        setTranscriptSummary(chatData.transcriptSummary);
+      } else {
+        try {
+          openaiRequest(chatData.transcript, "Transcript");
+        } catch (e) {
+          console.err(e);
+        }
+      }
+    }
+  }, [transcript]);*/
 
   useEffect(() => {
     console.log(selectedItems);
   }, [selectedItems]);
-
+  const [chatData, setChataData] = useState();
   const fetchChat = async (chatId) => {
     try {
       setConversation([]);
@@ -240,18 +256,10 @@ function AudioToText() {
         if (chatData.transcriptSummary) {
           setTranscriptSummary(chatData.transcriptSummary);
         }
-        console.log("Transcript summary: ", chatData.transcriptSummary);
-        setTranscript(chatData.transcript).then(() => {
-          if (chatData.transcriptSummary) {
-            setTranscriptSummary(chatData.transcriptSummary);
-          } else {
-            if (!transcriptSummary) {
-              openaiRequest(chatData.transcript, "Transcript");
-            }
-          }
-        });
+        setTranscript(chatData.transcript);
       } else {
         setTranscript("");
+        setTranscriptSummary("");
         setTranscribing("No");
       }
     } catch (error) {
@@ -400,23 +408,6 @@ function AudioToText() {
           content: `Please provide a structured summary of the following transcript using HTML. List out the main points using unordered list tags: ${transcript}`,
         },
       ];
-    } else if (transcriptSummary) {
-      conversationToState = [
-        ...conversation,
-        {
-          role: "user",
-          content: content,
-        },
-      ];
-      setConversation(conversationToState);
-      conversationToOpenai = [
-        ...conversationToState,
-        {
-          role: "user",
-          content: `Summarize: ${transcript}`,
-        },
-        { role: "system", content: transcriptSummary },
-      ];
     } else {
       conversationToState = [
         ...conversation,
@@ -429,41 +420,86 @@ function AudioToText() {
       conversationToOpenai = conversationToState;
     }
     setMessage("");
+    let response;
+    try {
+      response = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo-16k",
+        messages: conversationToOpenai,
+        temperature: 0.5,
+        max_tokens: 2000,
+        top_p: 1.0,
+        frequency_penalty: 0.0,
+        presence_penalty: 0.0,
+      });
 
-    const response = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo-16k",
-      messages: conversationToOpenai,
-      temperature: 0,
-      max_tokens: 2000,
-      top_p: 1.0,
-      frequency_penalty: 0.0,
-      presence_penalty: 0.0,
-    });
-    if (type == "Transcript") {
-      console.log(response.data.choices[0].message.content);
-      setTranscriptSummary(response.data.choices[0].message.content);
-      saveTranscriptSummary(
-        String(user.uid),
-        String(chatId),
-        response.data.choices[0].message.content
-      );
-    } else {
-      setConversation([
-        ...conversationToState,
-        {
-          role: "system",
-          content: response.data.choices[0].message.content,
-        },
-      ]);
+      if (type == "Transcript") {
+        console.log(response.data.choices[0].message.content);
+        setTranscriptSummary(response.data.choices[0].message.content);
+        saveTranscriptSummary(
+          String(user.uid),
+          String(chatId),
+          response.data.choices[0].message.content
+        );
+        const inputTokens = response.data.usage.prompt_tokens;
+        const outputTokens = response.data.usage.completion_tokens;
+        const cost = (inputTokens * 0.3) / 1000 + (outputTokens * 0.4) / 1000;
+        console.log(
+          "inputTokens",
+          inputTokens,
+          "outputTokens",
+          outputTokens,
+          "cost",
+          cost
+        );
+        removeCredits(user.uid, cost);
+        setCredits(credits - cost);
+        setConversation([
+          {
+            role: "user",
+            content: `Summarize: ${transcript}`,
+          },
+          { role: "system", content: response.data.choices[0].message.content },
+        ]);
+      } else {
+        setConversation([
+          ...conversationToState,
+          {
+            role: "system",
+            content: response.data.choices[0].message.content,
+          },
+        ]);
+        const inputTokens = response.data.usage.prompt_tokens;
+        const outputTokens = response.data.usage.completion_tokens;
+        const cost = (inputTokens * 0.5) / 1000 + (outputTokens * 0.7) / 1000;
+        console.log(
+          "inputTokens",
+          inputTokens,
+          "outputTokens",
+          outputTokens,
+          "cost",
+          cost
+        );
+        removeCredits(user.uid, cost);
+        setCredits(credits - cost);
+      }
+
+      setMessage("");
+    } catch (e) {
+      console.error("Error:", e.message, e);
+      if (e.response) {
+        console.error("Server Response:", e.response.data.error.message);
+      }
     }
-
-    setMessage("");
   }
 
   useEffect(() => {
     if (transcript) {
       if (!transcriptSummary) {
-        openaiRequest(transcript, "Transcript");
+        try {
+          openaiRequest(transcript, "Transcript");
+        } catch (e) {
+          console.err(e);
+        }
       }
     }
   }, [transcript]);
@@ -477,7 +513,7 @@ function AudioToText() {
       event.target.elements.audio.files &&
       event.target.elements.audio.files.length > 0
     ) {
-      if (credits - Math.floor(audioDuration * 10) > 0) {
+      if (credits - Math.floor(audioDuration * 2) >= 0) {
         const audioFile = event.target.elements.audio.files[0];
         setAudio(URL.createObjectURL(audioFile));
         setAudioFileDetails(audioFile);
@@ -506,7 +542,8 @@ function AudioToText() {
         let response;
         let result;
         console.log("chatId", chatId);
-        let removeAmount = Math.floor(audioDuration * 10);
+
+        let removeAmount = Math.floor(audioDuration * 2);
         console.log("removeAmount", removeAmount);
         removeCredits(user.uid, removeAmount);
         setCredits(credits - removeAmount);
@@ -541,11 +578,9 @@ function AudioToText() {
   const sendMessage = async (event) => {
     event.preventDefault();
     if (credits - 10 > 0) {
+      console.log("message: ", message);
       saveChat(String(user.uid), String(chatId), conversation);
-      const openAiResponse = await openaiRequest(message).then(() => {
-        removeCredits(user.uid, 10);
-        setCredits(credits - 10);
-      });
+      const openAiResponse = await openaiRequest(message, "Chat");
       saveChat(String(user.uid), String(chatId), conversation);
     }
   };
@@ -601,7 +636,11 @@ function AudioToText() {
       </Modal>
 
       {/*modal to create Transcripts */}
-      <Modal show={showTranscript} onHide={closeTranscript}>
+      <Modal
+        show={showTranscript}
+        onHide={closeTranscript}
+        className="modal-lg"
+      >
         <Modal.Header closeButton className="no-focus transcript-header">
           {transcribing === "Done" ? (
             <div
@@ -610,7 +649,7 @@ function AudioToText() {
                 display: "flex",
                 alignItems: "space-around",
                 justifyContent: "center",
-                background: "rgba(211,211,211,.8)",
+                background: "rgba(170,170,170,1)",
                 padding: "3px 5px",
                 gap: "5px",
                 borderRadius: "5px",
@@ -623,7 +662,7 @@ function AudioToText() {
                   border: "none",
                   background:
                     showTranscriptText == "Transcript"
-                      ? "rgba(190,190,190,1)"
+                      ? "rgba(110,110,110,1)"
                       : "rgba(211,211,211,.0)",
                 }}
                 onClick={() => setShowTranscriptText("Transcript")}
@@ -635,7 +674,7 @@ function AudioToText() {
                 style={{
                   background:
                     showTranscriptText == "Summary"
-                      ? "rgba(190,190,190,1)"
+                      ? "rgba(110,110,110,1)"
                       : "rgba(211,211,211,.0)",
                   border: "none",
                 }}
@@ -758,15 +797,16 @@ function AudioToText() {
               <p style={{ marginTop: "10px" }}>
                 <strong>Estimated: </strong>
                 {Math.floor(
-                  (audioDuration / 3) * (transcriptionProgress / 100)
+                  (audioDuration / 2.8) * (transcriptionProgress / 100)
                 )}{" "}
                 min :{" "}
                 {Math.floor(
-                  (((audioDuration * 60) / 3) * (transcriptionProgress / 100)) %
+                  (((audioDuration * 60) / 2.8) *
+                    (transcriptionProgress / 100)) %
                     60
                 )}{" "}
-                sec / {Math.floor(audioDuration / 3)} min :{" "}
-                {Math.floor(((audioDuration * 60) / 3) % 60)} sec
+                sec / {Math.floor(audioDuration / 2.8)} min :{" "}
+                {Math.floor(((audioDuration * 60) / 2.8) % 60)} sec
               </p>
             </div>
           ) : showTranscriptText == "Transcript" ? (
@@ -823,7 +863,6 @@ function AudioToText() {
           )}
         </Modal.Footer>
       </Modal>
-
       <div
         className="contains-sidebar-and-chat-info"
         style={{
@@ -1043,6 +1082,7 @@ function AudioToText() {
                     showSelectBoxes={showSelectBoxes}
                     saveItemName={saveItemName}
                     saveFolderIsOpen={saveFolderIsOpen}
+                    chatId={chatId}
                   />
                 ) : (
                   <Chat
@@ -1145,10 +1185,10 @@ function AudioToText() {
               {conversation.map((item, index) => (
                 <div
                   style={{
-                    padding: "24px 10vw",
+                    padding: "24px 7vw",
                     margin: "0",
                     backgroundColor:
-                      item.role === "user" ? "#F8FBFF" : "rgba(233,244,255,.8)",
+                      item.role === "user" ? "#F8FBFF" : "rgba(233,244,255,.7)",
                     display: "flex",
                     flexDirection: "row",
                     gap: "36px",
@@ -1160,7 +1200,7 @@ function AudioToText() {
                   />
                   <p
                     key={index}
-                    style={{ fontSize: "16px", lineHeight: "28px" }}
+                    style={{ fontSize: "16px", lineHeight: "24px" }}
                   >
                     {item.content}
                   </p>
@@ -1350,6 +1390,7 @@ function Folder({
         ref={folderDrag}
         action
         onClick={toggleOpen}
+        className="folder-item"
         style={{
           display: "flex",
           flexDirection: "row",
@@ -1450,6 +1491,7 @@ function Folder({
                   showSelectBoxes={showSelectBoxes}
                   saveItemName={saveItemName}
                   saveFolderIsOpen={saveFolderIsOpen}
+                  chatId={chatId}
                 />
               ) : (
                 ""
@@ -1465,6 +1507,7 @@ function Folder({
                   chatId={subItem.id}
                   setChatId={setChatId}
                   fetchChat={fetchChat}
+                  overallChatId={chatId}
                   depth={depth}
                   parentId={subItem.parentId}
                   toggleSelectedItem={toggleSelectedItem}
@@ -1518,6 +1561,7 @@ function Chat({
   }));
   const [editingName, setEditingName] = useState(false);
   const [currentName, setCurrentName] = useState(name);
+  console.log(chatId, overallChatId);
   return (
     <ListGroup.Item
       ref={drag}

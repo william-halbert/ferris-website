@@ -45,6 +45,16 @@
 }
 .transcript-tab:hover,
 .transcript-summary-tab:hover {
-  background: rgb(204, 204, 204) !important;
+  background: rgb(110, 110, 110) !important;
   cursor: pointer;
+}
+
+.modal-lg {
+  margin-left: 50vw;
+  transform: translate(-50%);
+  overflow-y: auto;
+}
+.chat-item:hover,
+.folder-item:hover {
+  background-color: rgba(211, 211, 211, 0.2) !important;
 }
