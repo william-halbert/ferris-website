@@ -16,6 +16,8 @@ export default function Index() {
   const [hideHeaderItems, setHideHeaderItems] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+
   const demoSectionRef = useRef(null);
 
   return (
@@ -27,6 +29,8 @@ export default function Index() {
           setShowLoginModal={setShowLoginModal}
           showSignupModal={showSignupModal}
           setShowSignupModal={setShowSignupModal}
+          showForgotModal={showForgotModal}
+          setShowForgotModal={setShowForgotModal}
         />
       )}
       {showSignupModal && (
@@ -35,6 +39,18 @@ export default function Index() {
           setShowLoginModal={setShowLoginModal}
           showSignupModal={showSignupModal}
           setShowSignupModal={setShowSignupModal}
+          showForgotModal={showForgotModal}
+          setShowForgotModal={setShowForgotModal}
+        />
+      )}
+      {showForgotModal && (
+        <ForgotPassword
+          showLoginModal={showLoginModal}
+          setShowLoginModal={setShowLoginModal}
+          showSignupModal={showSignupModal}
+          setShowSignupModal={setShowSignupModal}
+          showForgotModal={showForgotModal}
+          setShowForgotModal={setShowForgotModal}
         />
       )}
       <div style={{ marginTop: "86px", marginBottom: "20vh" }}>
@@ -154,6 +170,8 @@ function Login(props) {
     setShowLoginModal,
     showSignupModal,
     setShowSignupModal,
+    showForgotModal,
+    setShowForgotModal,
   } = props;
   const emailRef = useRef();
   const passwordRef = useRef();
@@ -168,8 +186,15 @@ function Login(props) {
     try {
       setError("");
       setLoading(true);
-      await login(emailRef.current.value, passwordRef.current.value);
-      setShowLoginModal(false);
+      const response = await login(
+        emailRef.current.value,
+        passwordRef.current.value
+      );
+      if (response != "success") {
+        return setError(response);
+      } else {
+        setShowLoginModal(false);
+      }
     } catch (err) {
       console.log(err);
       setError("Failed to log in.");
@@ -199,12 +224,20 @@ function Login(props) {
               <Form.Label>Password</Form.Label>
               <Form.Control type="password" ref={passwordRef} required />
             </Form.Group>
-            <Button disabled={loading} className="w-100 mt-3" type="submit">
+            <Button className="w-100 mt-3" type="submit">
               Log In
             </Button>
           </Form>
           <div className="w-100 text-center mt-3">
-            <Link to="/forgot-password">Forgot password?</Link>
+            <Link
+              onClick={() => {
+                setShowLoginModal(false);
+                setShowSignupModal(false);
+                setShowForgotModal(true);
+              }}
+            >
+              Forgot password?
+            </Link>
           </div>
 
           <div
@@ -235,7 +268,7 @@ function Signup(props) {
   const passwordConfirmationRef = useRef();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, authError } = useAuth();
   const navigate = useNavigate();
   const [confirmedTerms, setConfirmedTerms] = useState(false);
   async function handleSignUp(e) {
@@ -249,8 +282,15 @@ function Signup(props) {
     try {
       setError("");
       setLoading(true);
-      await signup(emailRef.current.value, passwordRef.current.value);
-      setShowSignupModal(false);
+      const response = await signup(
+        emailRef.current.value,
+        passwordRef.current.value
+      );
+      if (response != "success") {
+        return setError(response);
+      } else {
+        setShowSignupModal(false);
+      }
     } catch (err) {
       console.log(err);
       setError("Failed to set up an account.");
@@ -302,7 +342,7 @@ function Signup(props) {
                 onChange={(e) => setConfirmedTerms(e.target.checked)}
               />
             </Form.Group>
-            <Button disabled={loading} className="w-100 mt-3" type="submit">
+            <Button className="w-100 mt-3" type="submit">
               Sign Up
             </Button>
           </Form>
@@ -316,6 +356,66 @@ function Signup(props) {
             style={{ cursor: "pointer" }}
           >
             Already have an account? <Link>Log In</Link>
+          </div>
+        </Modal.Body>
+      </Modal>
+    </>
+  );
+}
+function ForgotPassword(props) {
+  const { showForgotModal, setShowLoginModal, setShowForgotModal } = props;
+  const emailRef = useRef();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { resetPassword } = useAuth();
+  const [message, setMessage] = useState("");
+
+  async function handleReset(e) {
+    e.preventDefault();
+    try {
+      setError("");
+      setLoading(true);
+      const response = await resetPassword(emailRef.current.value);
+      if (response != "success") {
+        return setError(response);
+      } else {
+        setMessage("Check your email for further instructions.");
+      }
+    } catch (err) {
+      console.log(err);
+      setError("Failed to reset password.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <Modal show={showForgotModal} onHide={() => setShowForgotModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Reset Password</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          {message && <Alert variant="success">{message}</Alert>}
+          {error && <Alert variant="danger">{error}</Alert>}
+          <Form onSubmit={handleReset}>
+            <Form.Group id="email">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" ref={emailRef} required />
+            </Form.Group>
+            <Button className="w-100 mt-3" type="submit">
+              Reset Password
+            </Button>
+          </Form>
+          <div className="w-100 text-center mt-3">
+            <Link
+              onClick={() => {
+                setShowLoginModal(true);
+                setShowForgotModal(false);
+              }}
+            >
+              Login
+            </Link>
           </div>
         </Modal.Body>
       </Modal>

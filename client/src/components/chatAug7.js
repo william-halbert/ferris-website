@@ -15,6 +15,7 @@ import {
   Dropdown,
   Modal,
   Spinner,
+  Alert,
 } from "react-bootstrap";
 import {
   faSquare as farSquare,
@@ -56,8 +57,10 @@ function AudioToText() {
   const [items, setItems] = useState([]);
   const [audio, setAudio] = useState();
   const [audioDuration, setAudioDuration] = useState(null); // minutes
-
+  const [transcriptSuccess, setTranscriptSuccess] = useState("");
   const [error, setError] = useState("");
+  const [messageError, setMessageError] = useState("");
+  const [transcriptError, setTranscriptError] = useState("");
   const [transcript, setTranscript] = useState("");
   const [transcriptSummary, setTranscriptSummary] = useState("");
   const [message, setMessage] = useState("");
@@ -485,9 +488,10 @@ function AudioToText() {
 
       setMessage("");
     } catch (e) {
-      console.error("Error:", e.message, e);
+      setMessageError(e.response.data.error.message);
+      console.log("Error:", e.message, e);
       if (e.response) {
-        console.error("Server Response:", e.response.data.error.message);
+        console.log("Server Response:", e.response.data.error.message);
       }
     }
   }
@@ -513,6 +517,16 @@ function AudioToText() {
       event.target.elements.audio.files &&
       event.target.elements.audio.files.length > 0
     ) {
+      if (credits - Math.floor(audioDuration * 2) <= 0) {
+        return setTranscriptError(
+          "There are currently not enough credits to transcribe audio of this length, see My Credits page."
+        );
+      }
+      if (audioDuration > 60) {
+        return setTranscriptError(
+          "Transcribed files can be a maximum of 60 minutes."
+        );
+      }
       if (credits - Math.floor(audioDuration * 2) >= 0) {
         const audioFile = event.target.elements.audio.files[0];
         setAudio(URL.createObjectURL(audioFile));
@@ -576,12 +590,17 @@ function AudioToText() {
   };
 
   const sendMessage = async (event) => {
+    setMessageError("");
     event.preventDefault();
     if (credits - 10 > 0) {
       console.log("message: ", message);
       saveChat(String(user.uid), String(chatId), conversation);
       const openAiResponse = await openaiRequest(message, "Chat");
       saveChat(String(user.uid), String(chatId), conversation);
+    } else {
+      setMessageError(
+        "Not enough credits, see My Credits for more information."
+      );
     }
   };
 
@@ -697,10 +716,15 @@ function AudioToText() {
               id="audioSubmitForm"
             >
               <div>
+                {transcriptError && (
+                  <Alert style={{ maxWidth: "600px" }} variant="danger">
+                    {transcriptError}
+                  </Alert>
+                )}
                 <input
                   id="audioInput"
                   type="file"
-                  accept="audio/*"
+                  accept="audio/mpeg,audio/x-m4a"
                   name="audio"
                   style={{ display: "none" }}
                   onChange={(e) => {
@@ -754,15 +778,6 @@ function AudioToText() {
                     <p style={{ margin: "0 0 0 0" }}>
                       <strong>File Name: </strong> {audioFileDetails.name}
                     </p>
-                    {/*
-                  <p>
-                    <strong>File Type: </strong>
-                    {audioFileDetails.type || "Unknown"}
-                  </p>
-                  <p>
-                    <strong>File Size: </strong>{" "}
-                    {(audioFileDetails.size / (1024 * 1024)).toFixed(2)} MB
-              </p>*/}
                     {audioDuration && (
                       <p style={{ margin: "6px 0 0 0" }}>
                         <strong>Duration: </strong>
@@ -775,6 +790,12 @@ function AudioToText() {
             </form>
           ) : transcribing == "Loading" ? (
             <div style={{ textAlign: "center" }}>
+              {transcriptError && (
+                <Alert variant="danger">{transcriptError}</Alert>
+              )}
+              {transcriptSuccess && (
+                <Alert variant="success">{transcriptSuccess}</Alert>
+              )}
               <p>
                 <strong>File Name: </strong> {audioFileDetails.name}
               </p>
@@ -1219,6 +1240,14 @@ function AudioToText() {
                 background: "rgba(255,255,255, 0)",
               }}
             >
+              {messageError && (
+                <Alert
+                  style={{ margin: "0 auto", maxWidth: "60%" }}
+                  variant="danger"
+                >
+                  {messageError}
+                </Alert>
+              )}
               <form
                 onSubmit={sendMessage}
                 style={{

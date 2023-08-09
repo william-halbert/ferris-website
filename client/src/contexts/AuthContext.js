@@ -42,18 +42,20 @@ export function AuthProvider({ children }) {
         await createUser(user.uid, email);
       }
     } catch (err) {
-      setAuthError(err);
+      return err.message;
     }
+    return "success";
   }
 
-  function login(email, password) {
+  async function login(email, password) {
     try {
-      signInWithEmailAndPassword(auth, email, password).then((user) => {
+      await signInWithEmailAndPassword(auth, email, password).then((user) => {
         setCurrentUser(user);
       });
     } catch (err) {
-      setAuthError(err);
+      return err.message;
     }
+    return "success";
   }
 
   function logout() {
@@ -274,12 +276,13 @@ export function AuthProvider({ children }) {
 
   function readChat(uid, chatId, folderId) {}
 
-  function resetPassword(email) {
+  async function resetPassword(email) {
     try {
-      sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email);
     } catch (err) {
-      setAuthError(err);
+      return err.message;
     }
+    return "success";
   }
 
   useEffect(() => {

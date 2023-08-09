@@ -89,6 +89,30 @@ async function transcribeAudioFile(filename, userId, chatId, mimetype) {
   } catch (error) {
     console.error("Error saving transcript to Firestore: ", error);
   }
+  if (mimetype === "audio/x-m4a" || mimetype === "audio/mp4") {
+    fs.unlinkSync(`${filename}.wav`);
+  }
+  fs.unlinkSync(filename);
+
+  const bucketReference = storage.bucket(bucketName);
+
+  const [bucketExists] = await bucketReference.exists();
+
+  if (bucketExists) {
+    try {
+      // Delete all files in the bucket first
+      const [files] = await bucketReference.getFiles();
+      await Promise.all(files.map((file) => file.delete()));
+
+      // Now delete the bucket
+      await bucketReference.delete();
+      console.log(`Bucket ${bucketName} and all its files have been deleted.`);
+    } catch (error) {
+      console.error(`Failed to delete bucket ${bucketName}.`, error);
+    }
+  } else {
+    console.warn(`Bucket ${bucketName} does not exist.`);
+  }
 
   return transcription;
 }

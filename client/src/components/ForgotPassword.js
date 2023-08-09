@@ -17,8 +17,12 @@ export default function ForgotPassword() {
     try {
       setError("");
       setLoading(true);
-      await resetPassword(emailRef.current.value);
-      setMessage("Check your email for further instructions.");
+      const response = await resetPassword(emailRef.current.value);
+      if (response != "success") {
+        return setError(response);
+      } else {
+        setMessage("Check your email for further instructions.");
+      }
     } catch (err) {
       console.log(err);
       setError("Failed to reset password.");
@@ -38,7 +42,7 @@ export default function ForgotPassword() {
               <Form.Control type="email" ref={emailRef} required />
             </Form.Group>
 
-            <Button disabled={loading} className="w-100 mt-3" type="submit">
+            <Button className="w-100 mt-3" type="submit">
               Reset Password
             </Button>
           </Form>
