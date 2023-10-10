@@ -18,7 +18,13 @@
   display: none;
 }
 .navbar-custom {
-  background-color: white !important;
+  background: linear-gradient(
+    45deg,
+    hsla(312, 100%, 89%, 1) 0%,
+    hsla(335, 100%, 50%, 1) 100%
+  );
+  margin: 0 48px;
+  border-radius: 0 0 24px 24px;
 }
 #basic-nav-dropdown:hover {
   background: rgba(211, 211, 211, 0.25);
@@ -46,6 +52,13 @@
   transform: translateX(-50%) !important;
 }
 @media (max-width: 993px) {
+  .navbar-custom {
+    margin: 0;
+    border-radius: 0 0 24px 24px;
+  }
+  .navbar-logo-custom {
+    max-height: 60px;
+  }
   #basic-nav-dropdown {
     display: unset;
   }
@@ -63,6 +76,12 @@
   }
   .desktop {
     display: none;
+  }
+  .mobile-menu-icon {
+    margin-right: 12px;
+  }
+  .index-navbar-get-started {
+    font-size: 24px !important;
   }
 }
 .nav-link:focus,

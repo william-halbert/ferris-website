@@ -29,7 +29,6 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { useAuth } from "../contexts/AuthContext";
-import { process } from "dot";
 import { getDatabase } from "firebase/database";
 import Header from "./HeaderLanding";
 import "font-awesome/css/font-awesome.min.css";
@@ -48,6 +47,8 @@ import robotImg from "../images/gpt.png";
 function AudioToText() {
   //useState
   const Navigate = useNavigate();
+  const [showVerifyModal, setShowVerifyModal] = useState();
+  const [audioName, setAudioName] = useState();
   const [showSelectBoxes, setShowSelectBoxes] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -70,9 +71,12 @@ function AudioToText() {
   const [date, setDate] = useState("");
   const [deletedItems, setDeletedItems] = useState([]);
   const [audioFileDetails, setAudioFileDetails] = useState(null);
-  const [transcribing, setTranscribing] = useState("No");
+  const [transcribing, setTranscribing] = useState("");
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [showTranscriptText, setShowTranscriptText] = useState("Transcript");
+  const [showSidebar, setShowSidebar] = useState(null);
+  const [transcribeRequestReceived, setTranscribeRequestReceived] =
+    useState("");
 
   const {
     createFoldersAndChats,
@@ -89,6 +93,9 @@ function AudioToText() {
     getUser,
     logout,
     saveFolderIsOpen,
+    saveTranscribing,
+    saveProgress,
+    verifyEmail,
   } = useAuth();
   const [chatId, setChatId] = useState();
   const [conversation, setConversation] = useState([]);
@@ -117,7 +124,15 @@ function AudioToText() {
     e.preventDefault();
     e.stopPropagation();
   }
-
+  function handleShowSidebar(e) {
+    e.preventDefault();
+    setShowSidebar(true);
+  }
+  function handleHideSidebar() {
+    if (window.innerWidth < 500) {
+      setShowSidebar(false);
+    }
+  }
   function handleDragEnter(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -137,10 +152,10 @@ function AudioToText() {
 
     if (files && files.length > 0) {
       const audioFile = files[0];
-      console.log(audioFile);
       const audioURL = URL.createObjectURL(audioFile);
       setAudio(audioURL);
       setAudioFileDetails(audioFile);
+      setAudioName();
 
       let audioElem = new Audio();
       audioElem.src = audioURL;
@@ -152,10 +167,11 @@ function AudioToText() {
       console.error("No files found in the drop event");
     }
   }
-
+  const handleVerify = () => {
+    verifyEmail(user);
+  };
   useEffect(() => {
     getUser(user.uid).then((userData) => {
-      console.log(userData);
       if (userData && userData.credits) {
         setCredits(userData.credits);
         console.log("Set Credits to ", userData.credits / 100);
@@ -183,33 +199,13 @@ function AudioToText() {
 
   const toggleSelectedItem = (item) => {
     let strItem = String(item);
-    console.log(strItem);
     if (selectedItems.includes(strItem)) {
       setSelectedItems((prevItems) => prevItems.filter((i) => i !== strItem));
     } else {
       setSelectedItems((prevItems) => [...prevItems, strItem]);
     }
   };
-  /*
-  useEffect(async () => {
-    if (transcript) {
-      // or some other condition to ensure transcript is set
-      const chatData = await getChat(user.uid, String(chatId));
-      if (transcriptSummary) {
-        setTranscriptSummary(chatData.transcriptSummary);
-      } else {
-        try {
-          openaiRequest(chatData.transcript, "Transcript");
-        } catch (e) {
-          console.err(e);
-        }
-      }
-    }
-  }, [transcript]);*/
 
-  useEffect(() => {
-    console.log(selectedItems);
-  }, [selectedItems]);
   const [chatData, setChataData] = useState();
   const fetchChat = async (chatId) => {
     try {
@@ -253,13 +249,36 @@ function AudioToText() {
         ", " +
         dateObj.getFullYear();
       setDate(dateText);
-      console.log(conversation);
+      setTranscribing(chatData.transcribing);
       if (chatData.transcript) {
+        setTranscriptError("");
         setTranscribing("Done");
         if (chatData.transcriptSummary) {
           setTranscriptSummary(chatData.transcriptSummary);
         }
         setTranscript(chatData.transcript);
+      } else if (chatData.transcribing == "Loading") {
+        setTranscriptionProgress(0);
+        setTranscribing("Loading");
+        setTranscriptError("");
+        const startTime = new Date(
+          chatData.startTime.seconds * 1000 +
+            chatData.startTime.nanoseconds / 1000000
+        );
+        const currentTime = new Date();
+
+        let progress =
+          (((currentTime - startTime) * 2.8) /
+            (chatData.audioDuration * 1000 * 60)) *
+          100;
+
+        if (progress > 100) {
+          progress = 100;
+        }
+
+        setTranscriptionProgress(progress);
+        setAudioName(chatData.audioName);
+        setAudioDuration(chatData.audioDuration);
       } else {
         setTranscript("");
         setTranscriptSummary("");
@@ -271,6 +290,11 @@ function AudioToText() {
   };
 
   useEffect(() => {
+    if (user.emailVerified) {
+      setShowVerifyModal(false);
+    } else {
+      setShowVerifyModal(true);
+    }
     setItems([]);
     setDeletedItems([]);
     const fetchData = async () => {
@@ -348,7 +372,40 @@ function AudioToText() {
 
   useEffect(() => {
     fetchChat(chatId);
+    setTranscriptError("");
+    setMessageError("");
+    /*
+    if (transcribing == "Loading") {
+      const fetchInterval = setInterval(() => {
+        setTranscriptionProgress((prevProgress) => {
+          const incrementPerSecond = 100 / ((audioDuration / 2.8) * 60);
+          if (prevProgress < 100) {
+            const newProgress = prevProgress + incrementPerSecond;
+            return newProgress > 100 ? 100 : newProgress;
+          } else {
+            clearInterval(fetchInterval);
+            return 100;
+          }
+        });
+      }, 5000);
+    }*/
   }, [chatId]);
+
+  useEffect(() => {
+    let intervalId;
+    /*
+    if (transcribing === "Loading") {
+      intervalId = setInterval(() => {
+        fetchChat(chatId);
+      }, 20000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };*/
+  }, [transcribing]);
 
   //create new folder or chat
   const createNewItem = async (type) => {
@@ -408,7 +465,24 @@ function AudioToText() {
       conversationToOpenai = [
         {
           role: "user",
-          content: `Please provide a structured summary of the following transcript using HTML. List out the main points using unordered list tags: ${transcript}`,
+          content: `
+          Please summarize the following transcript with these guidelines:
+          
+          1. Use HTML formatting suitable for a JSX environment.
+          2. For Main Points:
+             -  Use <h3> for the 'Main Points' header and include an unordered list for the main points underneath.
+          3. For STEM courses:
+             - Use <h3> for the 'Formulas' header and include any mentioned formulas as list items underneath.
+          4. If "homework" is mentioned:
+             - Use <h3> for the 'Homework' header and detail the homework assignments as list items underneath.
+          5. If any "projects" are discussed:
+             - Use <h3> for the 'Projects' header and detail the projects as list items underneath.
+          6. If any "tests" are announced:
+             - Use <h3> for the 'Tests' header and detail the tests as list items underneath.
+          7. Conclude with a general summary using <h3> for the 'Summary' header.
+          8. Provide links to learn more about the topics, preferably from YouTube, in a paragraph format.
+          
+          Transcript: ${transcript}`,
         },
       ];
     } else {
@@ -436,7 +510,6 @@ function AudioToText() {
       });
 
       if (type == "Transcript") {
-        console.log(response.data.choices[0].message.content);
         setTranscriptSummary(response.data.choices[0].message.content);
         saveTranscriptSummary(
           String(user.uid),
@@ -446,22 +519,16 @@ function AudioToText() {
         const inputTokens = response.data.usage.prompt_tokens;
         const outputTokens = response.data.usage.completion_tokens;
         const cost = (inputTokens * 0.3) / 1000 + (outputTokens * 0.4) / 1000;
-        console.log(
-          "inputTokens",
-          inputTokens,
-          "outputTokens",
-          outputTokens,
-          "cost",
-          cost
-        );
+
         removeCredits(user.uid, cost);
         setCredits(credits - cost);
-        setConversation([
+        setConversation((prevConversation) => [
           {
             role: "user",
             content: `Summarize: ${transcript}`,
           },
           { role: "system", content: response.data.choices[0].message.content },
+          ...prevConversation,
         ]);
       } else {
         setConversation([
@@ -474,16 +541,10 @@ function AudioToText() {
         const inputTokens = response.data.usage.prompt_tokens;
         const outputTokens = response.data.usage.completion_tokens;
         const cost = (inputTokens * 0.5) / 1000 + (outputTokens * 0.7) / 1000;
-        console.log(
-          "inputTokens",
-          inputTokens,
-          "outputTokens",
-          outputTokens,
-          "cost",
-          cost
-        );
+
         removeCredits(user.uid, cost);
         setCredits(credits - cost);
+        setMessageState("Done");
       }
 
       setMessage("");
@@ -499,10 +560,30 @@ function AudioToText() {
   useEffect(() => {
     if (transcript) {
       if (!transcriptSummary) {
+        getUser(user.uid).then((userData) => {
+          if (userData && userData.credits) {
+            setCredits(userData.credits);
+            console.log("Set Credits to ", userData.credits / 100);
+          }
+        });
         try {
-          openaiRequest(transcript, "Transcript");
+          if (credits - 10 > 0) {
+            const sendMessage = async () => {
+              saveChat(String(user.uid), String(chatId), conversation);
+              const openAiResponse = await openaiRequest(
+                transcript,
+                "Transcript"
+              );
+              saveChat(String(user.uid), String(chatId), conversation);
+            };
+            sendMessage();
+          } else {
+            setMessageError(
+              "Not enough credits, see My Credits for more information."
+            );
+          }
         } catch (e) {
-          console.err(e);
+          console.log(e);
         }
       }
     }
@@ -511,89 +592,92 @@ function AudioToText() {
   const onAudioSubmit = async (event) => {
     // Get the file from the event
     console.log("Started onAudioSubmit");
-    console.log("event.target:", event.target);
-    console.log("event.target.elements:", event.target.elements);
+    setTranscriptionProgress(0);
+
     if (
       event.target.elements.audio.files &&
       event.target.elements.audio.files.length > 0
     ) {
-      if (credits - Math.floor(audioDuration * 2) <= 0) {
+      if (credits - Math.floor(audioDuration * 1) <= 0) {
         return setTranscriptError(
           "There are currently not enough credits to transcribe audio of this length, see My Credits page."
         );
       }
-      if (audioDuration > 60) {
+
+      if (audioDuration > 52) {
         return setTranscriptError(
-          "Transcribed files can be a maximum of 60 minutes."
+          "Transcribed files can be a maximum of 50 minutes."
         );
       }
-      if (credits - Math.floor(audioDuration * 2) >= 0) {
-        const audioFile = event.target.elements.audio.files[0];
-        setAudio(URL.createObjectURL(audioFile));
-        setAudioFileDetails(audioFile);
 
-        setTranscribing("Loading");
+      const audioFile = event.target.elements.audio.files[0];
+      setAudio(URL.createObjectURL(audioFile));
+      setAudioFileDetails(audioFile);
+      setAudioName(event.target.elements.audio.files[0].name);
+      setTranscribing("Loading");
+      setTranscriptError(
+        "Wait for the transcription to successfully start in the backend"
+      );
+      saveTranscribing(String(user.uid), String(chatId), "Loading");
+      saveProgress(
+        String(user.uid),
+        String(chatId),
+        audioDuration,
+        event.target.elements.audio.files[0].name,
+        new Date()
+      );
+      console.log("audioduration", audioDuration);
+      const interval = setInterval(() => {
+        setTranscriptionProgress((prevProgress) => {
+          const incrementPerSecond = 100 / ((audioDuration / 60) * 60);
+          if (prevProgress < 100) {
+            const newProgress = prevProgress + incrementPerSecond;
+            return newProgress > 100 ? 100 : newProgress;
+          } else {
+            clearInterval(interval);
+            return 100;
+          }
+        });
+      }, 1000);
 
-        const interval = setInterval(() => {
-          setTranscriptionProgress((prevProgress) => {
-            const incrementPerSecond = 100 / ((audioDuration / 3) * 60);
-            if (prevProgress < 100) {
-              const newProgress = prevProgress + incrementPerSecond;
-              return newProgress > 100 ? 100 : newProgress;
-            } else {
-              clearInterval(interval);
-              return 100;
-            }
-          });
-        }, 1000);
+      const formData = new FormData();
+      formData.append("audio", audioFile);
+      formData.append("userId", user.uid);
+      formData.append("chatId", chatId);
 
-        console.log(audioFileDetails.type);
-        const formData = new FormData();
-        formData.append("audio", audioFile);
-        formData.append("userId", user.uid);
-        formData.append("chatId", chatId);
+      let response;
+      let result;
 
-        let response;
-        let result;
-        console.log("chatId", chatId);
-
-        let removeAmount = Math.floor(audioDuration * 2);
-        console.log("removeAmount", removeAmount);
-        removeCredits(user.uid, removeAmount);
-        setCredits(credits - removeAmount);
-        try {
-          console.log("Server URL:", process.env.REACT_APP_SERVER);
-          response = await fetch(`${process.env.REACT_APP_SERVER}/transcribe`, {
-            method: "POST",
-            body: formData,
-          });
-        } catch (error) {
-          console.error("Error while fetching transcription:", error);
-        }
-
-        if (response && response.ok) {
-          result = await response.json();
-          setTranscript(result.transcript);
-          //saveTranscript(user.uid, String(chatId), result);
-          console.log(transcript);
-
-          setTranscribing("Done");
-          setTranscriptionProgress(0);
-        } else {
-          console.error(
-            "Error:",
-            response ? response.statusText : "No response from server"
-          );
-        }
+      let removeAmount = Math.floor(audioDuration * 1);
+      console.log("removeAmount", removeAmount);
+      removeCredits(user.uid, removeAmount);
+      setCredits(credits - removeAmount);
+      try {
+        console.log("Server URL:", process.env.REACT_APP_SERVER);
+        response = await fetch(`${process.env.REACT_APP_SERVER}/transcribe`, {
+          method: "POST",
+          body: formData,
+        });
+      } catch (error) {
+        console.error("Error while fetching transcription:", error);
+      }
+      try {
+        result = await response.json();
+        setTranscribing("Done");
+        setTranscriptionProgress(0);
+        setTranscript(result.transcript);
+        setShowTranscriptText("Transcript");
+      } catch (e) {
+        console.log(e);
       }
     }
   };
-
+  const [messageState, setMessageState] = useState();
   const sendMessage = async (event) => {
+    setMessageState("Waiting");
     setMessageError("");
     event.preventDefault();
     if (credits - 10 > 0) {
-      console.log("message: ", message);
       saveChat(String(user.uid), String(chatId), conversation);
       const openAiResponse = await openaiRequest(message, "Chat");
       saveChat(String(user.uid), String(chatId), conversation);
@@ -614,6 +698,8 @@ function AudioToText() {
       setError("Failed to log out.");
     }
   }
+
+  const textAreaRef = useRef(null);
 
   return (
     <div>
@@ -653,7 +739,32 @@ function AudioToText() {
           </Button>
         </Modal.Footer>
       </Modal>
-
+      {/* verify email modal */}
+      <Modal
+        show={showVerifyModal}
+        onHide={() => console.log("")}
+        className="modal-lg"
+      >
+        <Modal.Header closeButton className="no-focus transcript-header">
+          <Modal.Title>Please Verify Your Email</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>To continue using the app, you need to verify your email.</p>
+          <p>
+            We have sent a verification link to your email address. Please check
+            your inbox and click on the link to verify.
+          </p>
+          <p>Refresh the page if you just verified!</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeTranscript}>
+            Close
+          </Button>
+          <Button variant="primary" onClick={handleVerify}>
+            Resend Verification Link
+          </Button>
+        </Modal.Footer>
+      </Modal>
       {/*modal to create Transcripts */}
       <Modal
         show={showTranscript}
@@ -733,7 +844,7 @@ function AudioToText() {
                       const audioURL = URL.createObjectURL(audioFile);
                       setAudio(audioURL);
                       setAudioFileDetails(audioFile);
-
+                      setAudioName(e.target.files[0].name);
                       let audioElem = new Audio();
                       audioElem.src = audioURL;
                       audioElem.onloadedmetadata = () => {
@@ -757,10 +868,6 @@ function AudioToText() {
                     textAlign: "center",
                   }}
                   className="audio-input"
-                  onDragOver={handleDragOver}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
                 >
                   <h4
                     style={{
@@ -771,12 +878,15 @@ function AudioToText() {
                   >
                     Add Audio Files
                   </h4>
-                  <h5>or drag and drop</h5>
+                  <h5 style={{ maxWidth: "400px", margin: "0 auto" }}>
+                    We accept MP3, MP4, MP2, AAC, WAV, FLAC, PCM, and M4A, Files
+                    can't be longer than 50 minutes
+                  </h5>
                 </label>
                 {audioFileDetails && (
                   <div style={{ marginTop: "15px", textAlign: "center" }}>
                     <p style={{ margin: "0 0 0 0" }}>
-                      <strong>File Name: </strong> {audioFileDetails.name}
+                      <strong>File Name: </strong> {audioName}
                     </p>
                     {audioDuration && (
                       <p style={{ margin: "6px 0 0 0" }}>
@@ -790,14 +900,8 @@ function AudioToText() {
             </form>
           ) : transcribing == "Loading" ? (
             <div style={{ textAlign: "center" }}>
-              {transcriptError && (
-                <Alert variant="danger">{transcriptError}</Alert>
-              )}
-              {transcriptSuccess && (
-                <Alert variant="success">{transcriptSuccess}</Alert>
-              )}
               <p>
-                <strong>File Name: </strong> {audioFileDetails.name}
+                <strong>File Name: </strong> {audioName}
               </p>
               <div
                 style={{
@@ -818,21 +922,21 @@ function AudioToText() {
               <p style={{ marginTop: "10px" }}>
                 <strong>Estimated: </strong>
                 {Math.floor(
-                  (audioDuration / 2.8) * (transcriptionProgress / 100)
+                  (audioDuration / 60) * (transcriptionProgress / 100)
                 )}{" "}
                 min :{" "}
                 {Math.floor(
-                  (((audioDuration * 60) / 2.8) *
+                  (((audioDuration * 60) / 60) *
                     (transcriptionProgress / 100)) %
                     60
                 )}{" "}
-                sec / {Math.floor(audioDuration / 2.8)} min :{" "}
-                {Math.floor(((audioDuration * 60) / 2.8) % 60)} sec
+                sec / {Math.floor(audioDuration / 60)} min :{" "}
+                {Math.floor(((audioDuration * 60) / 60) % 60)} sec
               </p>
             </div>
           ) : showTranscriptText == "Transcript" ? (
             <div>Transcript: {transcript}</div>
-          ) : (
+          ) : transcriptSummary != "" ? (
             <div
               style={{
                 display: "flex",
@@ -841,7 +945,18 @@ function AudioToText() {
               dangerouslySetInnerHTML={{
                 __html: transcriptSummary.replace(/\n/g, "<br />"),
               }}
+              className="transcript-summary"
             ></div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+              }}
+              className="transcript-summary"
+            >
+              Fetching your summary...
+            </div>
           )}
         </Modal.Body>
         <Modal.Footer>
@@ -892,256 +1007,270 @@ function AudioToText() {
         }}
       >
         {/*sidebar  */}
-        <div
-          className="sidebar"
-          style={{
-            flex: "0.25",
-            overflowY: "auto",
-            padding: "0",
-            background: "rgba(243,245,249, .9)",
-          }}
-        >
-          {/*sidebar header  */}
+        {showSidebar == true || showSidebar == null ? (
           <div
+            className="sidebar"
             style={{
-              position: "fixed",
-              top: "0",
-              left: "0",
-              width: "25vw",
+              flex: "0.25",
+              overflowY: "auto",
+              padding: "0",
               background: "rgba(243,245,249, .9)",
-              zIndex: "5",
-              paddingTop: "5px",
             }}
           >
-            <Row
-              className="align-items-center justify-content-between"
-              style={{ padding: "0 0 0 6px" }}
+            {/*sidebar header  */}
+            <div
+              className="sidebar-header"
+              style={{
+                position: "fixed",
+                top: "0",
+                left: "0",
+                width: "25vw",
+                background: "rgba(243,245,249, .9)",
+                zIndex: "5",
+                paddingTop: "5px",
+              }}
             >
-              <Col
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "start",
-                }}
+              <Row
+                className="align-items-center justify-content-between"
+                style={{ padding: "0 0 0 6px" }}
               >
-                <h1
-                  className="sidebar-edit"
+                <Col
                   style={{
-                    fontSize: "14px",
-                    margin: "0",
-                    color: "black",
-                    paddding: "0",
-                    background: editMode ? "rgba(221, 221, 221, 0.5)" : "none",
-                  }}
-                  onClick={() => {
-                    toggleEditMode();
-                    toggleSelectBoxes();
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "start",
                   }}
                 >
-                  {editMode ? "Done" : "Select"}
-                </h1>
-                {editMode ? (
-                  <FontAwesomeIcon
-                    className="trash-icon"
+                  <h1
+                    className="sidebar-edit"
                     style={{
+                      fontSize: "14px",
                       margin: "0",
-                      marginLeft: "4px",
-                    }}
-                    icon={faTrash}
-                    onClick={() => {
-                      if (selectedItems.length > 0) {
-                        setShowDeleteModal(true);
-                      }
-                    }}
-                  />
-                ) : (
-                  <Dropdown>
-                    <Dropdown.Toggle
-                      as={FontAwesomeIcon}
-                      icon={faPlus}
-                      style={{
-                        color: "black",
-                        border: "none",
-                        background: "transparent",
-                      }}
-                      className="sidebar-plus"
-                    ></Dropdown.Toggle>
-                    <Dropdown.Menu
-                      className="custom-popup"
-                      style={{
-                        width: "15vw",
-                        marginTop: "5px",
-                      }}
-                    >
-                      <InputGroup
-                        style={{ width: "90%", margin: "0 auto 4px auto" }}
-                      >
-                        <FormControl
-                          value={newItemLabel}
-                          placeholder="Enter name"
-                          onChange={(e) => setNewItemLabel(e.target.value)}
-                        />
-                      </InputGroup>
-
-                      <Button
-                        variant="secondary"
-                        className="no-focus"
-                        style={{ width: "90%", margin: "4px 5%" }}
-                        onClick={() => createNewItem("Folder")}
-                      >
-                        Create Folder
-                      </Button>
-                      <Button
-                        variant="primary"
-                        className="no-focus"
-                        style={{ width: "90%", margin: "4px 5% 0 5%" }}
-                        onClick={() => createNewItem("Chat")}
-                      >
-                        Create Chat
-                      </Button>
-                    </Dropdown.Menu>
-                  </Dropdown>
-                )}
-              </Col>
-
-              <Col
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "end",
-                }}
-              >
-                <Dropdown
-                  style={{
-                    marginRight: "6px",
-                  }}
-                >
-                  <Dropdown.Toggle id="dropdown-basic" style={{ padding: "" }}>
-                    {
-                      <MenuRoundedIcon
-                        style={{ fill: "black" }}
-                        sx={{ fontSize: 30 }}
-                      />
-                    }
-                  </Dropdown.Toggle>
-
-                  <Dropdown.Menu
-                    style={{
-                      left: "100%",
-                      transform: "translateX(-100%)",
                       color: "black",
-                      textDecoration: "none",
+                      paddding: "0",
+                      background: editMode
+                        ? "rgba(221, 221, 221, 0.5)"
+                        : "none",
+                    }}
+                    onClick={() => {
+                      toggleEditMode();
+                      toggleSelectBoxes();
                     }}
                   >
-                    {!user && (
-                      <>
-                        <Dropdown.Item href="login">Log In</Dropdown.Item>
-                      </>
-                    )}
-                    {!user && (
-                      <>
-                        <Dropdown.Item href="signup">Sign Up</Dropdown.Item>
-                      </>
-                    )}
-                    {user && (
-                      <>
-                        <Dropdown.Item href="my-credits">
-                          My Credits
-                        </Dropdown.Item>
-                        <Dropdown.Item href="/">Demo</Dropdown.Item>
-                        <Dropdown.Item href="pricing">Pricing</Dropdown.Item>
-                        <Dropdown.Item
-                          style={{
-                            color: "black",
-                            textDecoration: "none",
-                          }}
-                          onClick={handleLogout}
+                    {editMode ? "Done" : "Select"}
+                  </h1>
+                  {editMode ? (
+                    <FontAwesomeIcon
+                      className="trash-icon"
+                      style={{
+                        margin: "0",
+                        marginLeft: "4px",
+                      }}
+                      icon={faTrash}
+                      onClick={() => {
+                        if (selectedItems.length > 0) {
+                          setShowDeleteModal(true);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Dropdown>
+                      <Dropdown.Toggle
+                        as={FontAwesomeIcon}
+                        icon={faPlus}
+                        style={{
+                          color: "black",
+                          border: "none",
+                          background: "transparent",
+                        }}
+                        className="sidebar-plus"
+                      ></Dropdown.Toggle>
+                      <Dropdown.Menu
+                        className="custom-popup"
+                        style={{
+                          width: "15vw",
+                          marginTop: "5px",
+                        }}
+                      >
+                        <InputGroup
+                          style={{ width: "90%", margin: "0 auto 4px auto" }}
                         >
-                          Logout
-                        </Dropdown.Item>
-                      </>
-                    )}
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Col>
-            </Row>
+                          <FormControl
+                            value={newItemLabel}
+                            placeholder="Enter name"
+                            onChange={(e) => setNewItemLabel(e.target.value)}
+                          />
+                        </InputGroup>
+
+                        <Button
+                          variant="secondary"
+                          className="no-focus"
+                          style={{ width: "90%", margin: "4px 5%" }}
+                          onClick={() => createNewItem("Folder")}
+                        >
+                          Create Folder
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className="no-focus"
+                          style={{ width: "90%", margin: "4px 5% 0 5%" }}
+                          onClick={() => createNewItem("Chat")}
+                        >
+                          Create Chat
+                        </Button>
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  )}
+                </Col>
+
+                <Col
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "end",
+                  }}
+                >
+                  <Dropdown
+                    style={{
+                      marginRight: "6px",
+                    }}
+                  >
+                    <Dropdown.Toggle
+                      id="dropdown-basic-chat"
+                      style={{ padding: "" }}
+                    >
+                      {
+                        <MenuRoundedIcon
+                          style={{ fill: "black" }}
+                          sx={{ fontSize: 30 }}
+                        />
+                      }
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu
+                      style={{
+                        left: "100%",
+                        transform: "translateX(-100%)",
+                        color: "black",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {!user && (
+                        <>
+                          <Dropdown.Item href="login">Log In</Dropdown.Item>
+                        </>
+                      )}
+                      {!user && (
+                        <>
+                          <Dropdown.Item href="signup">Sign Up</Dropdown.Item>
+                        </>
+                      )}
+                      {user && (
+                        <>
+                          <Dropdown.Item href="my-credits">
+                            My Credits
+                          </Dropdown.Item>
+                          <Dropdown.Item href="/">Demo</Dropdown.Item>
+                          <Dropdown.Item href="pricing">Pricing</Dropdown.Item>
+                          <Dropdown.Item
+                            style={{
+                              color: "black",
+                              textDecoration: "none",
+                            }}
+                            onClick={handleLogout}
+                          >
+                            Logout
+                          </Dropdown.Item>
+                        </>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Render folder and Chat in Sidebar */}
+            <div style={{ marginTop: "60px" }}></div>
+            <ListGroup>
+              <RootDropZone
+                setItemParent={setItemParent}
+                uid={user.uid}
+                setSidebar={setSidebar}
+                style={{ padding: "10px", background: "none" }}
+                setItems={setItems}
+              />
+              {items
+                .filter((item) => !item.parentId)
+                .map((item) =>
+                  item.type === "Folder" ? (
+                    <Folder
+                      key={item.id}
+                      id={item.id}
+                      newItemLabel={newItemLabel}
+                      setNewItemLabel={setNewItemLabel}
+                      items={items}
+                      depth={0}
+                      setItems={setItems}
+                      name={item.name}
+                      setChatId={setChatId}
+                      fetchChat={fetchChat}
+                      setItemParent={setItemParent}
+                      uid={user.uid}
+                      setSidebar={setSidebar}
+                      toggleSelectedItem={toggleSelectedItem}
+                      selectedItems={selectedItems}
+                      currentlySelected={
+                        selectedItems.includes(String(item.id)) ? true : false
+                      }
+                      showSelectBoxes={showSelectBoxes}
+                      saveItemName={saveItemName}
+                      saveFolderIsOpen={saveFolderIsOpen}
+                      chatId={chatId}
+                      handleHideSidebar={handleHideSidebar}
+                    />
+                  ) : (
+                    <Chat
+                      key={item.id}
+                      name={item.name}
+                      chatId={item.id}
+                      overallChatId={chatId}
+                      setChatId={setChatId}
+                      fetchChat={fetchChat}
+                      setItemParent={setItemParent}
+                      uid={user.uid}
+                      parentId={null}
+                      toggleSelectedItem={toggleSelectedItem}
+                      selectedItems={selectedItems}
+                      currentlySelected={
+                        selectedItems.includes(String(item.id)) ? true : false
+                      }
+                      showSelectBoxes={showSelectBoxes}
+                      saveItemName={saveItemName}
+                      setSidebar={setSidebar}
+                      setItems={setItems}
+                      setTranscript={setTranscript}
+                      setTranscriptSummary={setTranscriptSummary}
+                      handleHideSidebar={handleHideSidebar}
+                    />
+                  )
+                )}
+              <RootDropZone
+                setItemParent={setItemParent}
+                uid={user.uid}
+                style={{ padding: "200px 20px", background: "none" }}
+                setSidebar={setSidebar}
+                setItems={setItems}
+              />
+            </ListGroup>
           </div>
-
-          {/* Render folder and Chat in Sidebar */}
-          <div style={{ marginTop: "60px" }}></div>
-          <ListGroup>
-            <RootDropZone
-              setItemParent={setItemParent}
-              uid={user.uid}
-              setSidebar={setSidebar}
-              style={{ padding: "10px", background: "none" }}
-              setItems={setItems}
-            />
-            {items
-              .filter((item) => !item.parentId)
-              .map((item) =>
-                item.type === "Folder" ? (
-                  <Folder
-                    key={item.id}
-                    id={item.id}
-                    newItemLabel={newItemLabel}
-                    setNewItemLabel={setNewItemLabel}
-                    items={items}
-                    depth={0}
-                    setItems={setItems}
-                    name={item.name}
-                    setChatId={setChatId}
-                    fetchChat={fetchChat}
-                    setItemParent={setItemParent}
-                    uid={user.uid}
-                    setSidebar={setSidebar}
-                    toggleSelectedItem={toggleSelectedItem}
-                    selectedItems={selectedItems}
-                    currentlySelected={
-                      selectedItems.includes(String(item.id)) ? true : false
-                    }
-                    showSelectBoxes={showSelectBoxes}
-                    saveItemName={saveItemName}
-                    saveFolderIsOpen={saveFolderIsOpen}
-                    chatId={chatId}
-                  />
-                ) : (
-                  <Chat
-                    key={item.id}
-                    name={item.name}
-                    chatId={item.id}
-                    overallChatId={chatId}
-                    setChatId={setChatId}
-                    fetchChat={fetchChat}
-                    setItemParent={setItemParent}
-                    uid={user.uid}
-                    parentId={null}
-                    toggleSelectedItem={toggleSelectedItem}
-                    selectedItems={selectedItems}
-                    currentlySelected={
-                      selectedItems.includes(String(item.id)) ? true : false
-                    }
-                    showSelectBoxes={showSelectBoxes}
-                    saveItemName={saveItemName}
-                    setSidebar={setSidebar}
-                    setItems={setItems}
-                    setTranscript={setTranscript}
-                    setTranscriptSummary={setTranscriptSummary}
-                  />
-                )
-              )}
-            <RootDropZone
-              setItemParent={setItemParent}
-              uid={user.uid}
-              style={{ padding: "200px 20px", background: "none" }}
-              setSidebar={setSidebar}
-              setItems={setItems}
-            />
-          </ListGroup>
-        </div>
-
+        ) : (
+          ""
+        )}
         {/*Chat Section  */}
-        {chatId ? (
+        {showSidebar == true ||
+        (showSidebar == null && window.innerWidth < 500) ? (
+          ""
+        ) : chatId ? (
           <div
             className="chat-workspace"
             style={{
@@ -1152,7 +1281,7 @@ function AudioToText() {
           >
             {/*Chat Header  */}
             <Row
-              className="align-items-space-between"
+              className="align-items-space-between chat-header-mobile"
               style={{
                 position: "fixed",
                 top: "0",
@@ -1169,7 +1298,19 @@ function AudioToText() {
                   margin: "auto 0 ",
                 }}
               >
-                <h1 style={{ fontSize: "16px", margin: "auto 0 " }}>{date}</h1>
+                <h1
+                  className="desktop"
+                  style={{ fontSize: "16px", margin: "auto 0 " }}
+                >
+                  {date}
+                </h1>
+                <h1
+                  className="mobile"
+                  onClick={handleShowSidebar}
+                  style={{ fontSize: "16px", margin: "auto 0 ", zIndex: "5" }}
+                >
+                  Show Sidebar
+                </h1>
               </Col>
               <Col
                 className="text-center"
@@ -1181,9 +1322,9 @@ function AudioToText() {
               </Col>
               <Col className="text-right">
                 <Button
+                  className="chat-see-transcript-button no-focus"
                   onClick={() => setShowTranscript(true)}
                   variant="primary"
-                  className="no-focus"
                   style={{ borderRadius: "50px" }}
                 >
                   {transcribing === "Done" ? (
@@ -1203,30 +1344,72 @@ function AudioToText() {
             <div style={{ marginTop: "60px" }}></div>
             {/*Conversation  */}
             <div>
-              {conversation.map((item, index) => (
+              {conversation.map((item, index) => {
+                if (transcribing == "Done") {
+                  if (index < 2) return null;
+                }
+
+                return (
+                  <div
+                    style={{
+                      padding: "24px 7vw",
+                      margin: "0",
+                      backgroundColor:
+                        item.role === "user"
+                          ? "#F8FBFF"
+                          : "rgba(233,244,255,.7)",
+                      display: "flex",
+                      flexDirection: "row",
+                      gap: "36px",
+                    }}
+                  >
+                    <img
+                      src={item.role === "user" ? defaultUserImg : robotImg}
+                      style={{ width: "50px", height: "50px" }}
+                      className="desktop"
+                    />
+                    <p
+                      key={index}
+                      style={{
+                        fontSize: "16px",
+                        lineHeight: "24px",
+                        marginBottom: "0",
+                      }}
+                    >
+                      {item.content}
+                    </p>
+                  </div>
+                );
+              })}
+              {messageState == "Waiting" ? (
                 <div
                   style={{
                     padding: "24px 7vw",
                     margin: "0",
-                    backgroundColor:
-                      item.role === "user" ? "#F8FBFF" : "rgba(233,244,255,.7)",
+                    backgroundColor: "rgba(233,244,255,.7)",
                     display: "flex",
                     flexDirection: "row",
                     gap: "36px",
                   }}
                 >
                   <img
-                    src={item.role === "user" ? defaultUserImg : robotImg}
+                    src={robotImg}
                     style={{ width: "50px", height: "50px" }}
+                    className="desktop"
                   />
                   <p
-                    key={index}
-                    style={{ fontSize: "16px", lineHeight: "24px" }}
+                    style={{
+                      fontSize: "16px",
+                      lineHeight: "24px",
+                      marginBottom: "0",
+                    }}
                   >
-                    {item.content}
+                    I'm thinking...
                   </p>
                 </div>
-              ))}
+              ) : (
+                ""
+              )}
             </div>
             <div style={{ marginTop: "120px" }}></div>
             {/* Send a message  */}
@@ -1244,6 +1427,7 @@ function AudioToText() {
                 <Alert
                   style={{ margin: "0 auto", maxWidth: "60%" }}
                   variant="danger"
+                  className="message-input"
                 >
                   {messageError}
                 </Alert>
@@ -1259,6 +1443,7 @@ function AudioToText() {
                 }}
               >
                 <textarea
+                  ref={textAreaRef}
                   name="message"
                   placeholder="Type your message here"
                   value={message}
@@ -1297,6 +1482,24 @@ function AudioToText() {
                   }}
                   className="message-input"
                 ></textarea>
+                <Button
+                  className="mobile"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    sendMessage(e);
+                    setMessage("");
+                    textAreaRef.current.style.height = "38px";
+                  }}
+                  style={{
+                    margin: "0 18px 36px 0",
+
+                    borderRadius: "8px",
+
+                    height: "38px",
+                  }}
+                >
+                  Send
+                </Button>
               </form>
             </div>
           </div>
@@ -1357,6 +1560,7 @@ function Folder({
   setTranscript,
   setTranscriptSummary,
   saveFolderIsOpen,
+  handleHideSidebar,
 }) {
   const currentFolder = items.find((item) => item.id === id);
   const isOpen = currentFolder.isOpen;
@@ -1521,6 +1725,7 @@ function Folder({
                   saveItemName={saveItemName}
                   saveFolderIsOpen={saveFolderIsOpen}
                   chatId={chatId}
+                  handleHideSidebar={handleHideSidebar}
                 />
               ) : (
                 ""
@@ -1551,6 +1756,7 @@ function Folder({
                   setItems={setItems}
                   setTranscript={setTranscript}
                   setTranscriptSummary={setTranscriptSummary}
+                  handleHideSidebar={handleHideSidebar}
                 />
               ) : (
                 ""
@@ -1580,6 +1786,7 @@ function Chat({
   setItems,
   setTranscript,
   setTranscriptSummary,
+  handleHideSidebar,
 }) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "CHAT",
@@ -1590,15 +1797,14 @@ function Chat({
   }));
   const [editingName, setEditingName] = useState(false);
   const [currentName, setCurrentName] = useState(name);
-  console.log(chatId, overallChatId);
   return (
     <ListGroup.Item
       ref={drag}
       action
       className="chat-item"
       onClick={() => {
+        handleHideSidebar();
         setChatId(chatId);
-        console.log(chatId);
       }}
       style={{
         paddingLeft: !parentId

@@ -102,15 +102,18 @@ export default function Header() {
                   <img src={Logo} style={{ height: "68px" }} alt="Logo" />
                 </Link>
               </Navbar.Brand>
-              <Navbar.Toggle aria-controls="basic-navbar-nav" />
+              <Navbar.Toggle
+                className="mobile-menu-icon"
+                aria-controls="basic-navbar-nav"
+              />
               <Navbar.Collapse id="basic-navbar-nav">
                 <Nav className="ml-auto">
                   <div className="desktop" style={{ marginRight: "18px" }}>
                     <div className="container d-flex" style={{ gap: "24px" }}>
                       {user ? (
-                        <Nav.Link href="chat">Chat</Nav.Link>
+                        <Nav.Link href="chat">My Lectures</Nav.Link>
                       ) : (
-                        <Nav.Link href="pricing">Pricing</Nav.Link>
+                        <Nav.Link href="pricing"></Nav.Link>
                       )}
                     </div>
                   </div>
@@ -119,38 +122,23 @@ export default function Header() {
                     {!user && (
                       <>
                         <Nav.Link
-                          onClick={() => {
-                            setShowLoginModal(true);
-                            setShowSignupModal(false);
-                          }}
+                          href="privacy-policy"
                           style={{ padding: "10px 24px" }}
                         >
-                          Log In
+                          Privacy Policy
                         </Nav.Link>
                         <Nav.Link
-                          onClick={() => {
-                            setShowLoginModal(false);
-                            setShowSignupModal(true);
-                          }}
+                          href="terms-and-conditions"
                           style={{ padding: "10px 24px" }}
                         >
-                          Sign Up
-                        </Nav.Link>
-                        <Nav.Link
-                          href="pricing"
-                          style={{ padding: "10px 24px" }}
-                        >
-                          Pricing
+                          Terms and Conditions
                         </Nav.Link>
                       </>
                     )}
                     {user && (
                       <>
-                        <Nav.Link
-                          href="my-credits"
-                          style={{ padding: "10px 24px" }}
-                        >
-                          Chat
+                        <Nav.Link href="chat" style={{ padding: "10px 24px" }}>
+                          My Lectures
                         </Nav.Link>
                         <Nav.Link
                           href="my-credits"
@@ -165,7 +153,7 @@ export default function Header() {
                           Pricing
                         </Nav.Link>
                         <Nav.Link
-                          href="logout"
+                          onClick={handleLogout}
                           style={{ padding: "10px 24px" }}
                         >
                           Log Out
@@ -194,25 +182,15 @@ export default function Header() {
                   >
                     {!user && (
                       <>
-                        <Dropdown.Item
-                          onClick={() => {
-                            setShowLoginModal(true);
-                            setShowSignupModal(false);
-                          }}
-                        >
-                          Log In
+                        <Dropdown.Item href="privacy-policy">
+                          Privacy Policy
                         </Dropdown.Item>
                       </>
                     )}
                     {!user && (
                       <>
-                        <Dropdown.Item
-                          onClick={() => {
-                            setShowLoginModal(false);
-                            setShowSignupModal(true);
-                          }}
-                        >
-                          Sign Up
+                        <Dropdown.Item href="terms-and-conditions">
+                          Terms and Conditions
                         </Dropdown.Item>
                       </>
                     )}
@@ -253,6 +231,7 @@ export default function Header() {
           }}
         >
           <button
+            className="index-navbar-get-started"
             style={{
               padding: "10px 20px",
               backgroundColor: "#007BFF",
@@ -269,11 +248,12 @@ export default function Header() {
               if (user) {
                 navigate("/chat");
               } else {
-                navigate("/signup");
+                setShowLoginModal(false);
+                setShowSignupModal(true);
               }
             }}
           >
-            {user ? <>Chat</> : <>Get Started</>}
+            {user ? "My Lectures" : "Get Started"}
           </button>
         </div>
       )}
@@ -294,6 +274,7 @@ function Login(props) {
   const passwordRef = useRef();
   const passwordConfirmationRef = useRef();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -310,7 +291,7 @@ function Login(props) {
       if (response != "success") {
         return setError(response);
       } else {
-        setShowLoginModal(false);
+        setSuccess("You're logged in!");
       }
     } catch (err) {
       console.log(err);
@@ -332,6 +313,7 @@ function Login(props) {
         </Modal.Header>
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
+          {success && <Alert variant="success">{success}</Alert>}
           <Form onSubmit={handleLogin}>
             <Form.Group id="email">
               <Form.Label>Email</Form.Label>
@@ -384,10 +366,20 @@ function Signup(props) {
   const passwordRef = useRef();
   const passwordConfirmationRef = useRef();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const [loading, setLoading] = useState(false);
-  const { signup, authError } = useAuth();
+  const { signup, authError, verifyEmail } = useAuth();
   const navigate = useNavigate();
   const [confirmedTerms, setConfirmedTerms] = useState(false);
+  const handleVerify = () => {
+    try {
+      console.log("willhalbert16@gmail.com");
+    } catch (e) {
+      console.log(e);
+    }
+    verifyEmail("willhalbert16@gmail.com");
+  };
   async function handleSignUp(e) {
     e.preventDefault();
     if (!confirmedTerms) {
@@ -406,6 +398,9 @@ function Signup(props) {
       if (response != "success") {
         return setError(response);
       } else {
+        return setSuccess(
+          "You're signed up! Check your email in a few minutes for a verification link"
+        );
         setShowSignupModal(false);
       }
     } catch (err) {
@@ -430,6 +425,7 @@ function Signup(props) {
 
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
+          {success && <Alert variant="success">{success}</Alert>}
           <Form onSubmit={handleSignUp}>
             <Form.Group id="email">
               <Form.Label>Email</Form.Label>
