@@ -68,7 +68,7 @@ export default function Footer() {
           className="footer-link"
           style={{ marginLeft: "12px", color: "white" }}
         >
-          hello@ferris.so
+          tryFerris@gmail.com
         </p>
       </div>
       <div style={styles.footerRight}>
