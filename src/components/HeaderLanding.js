@@ -113,13 +113,13 @@ export default function Header() {
                 {!user && (
                   <>
                     <Nav.Link
-                      href="privacy-policy"
+                      href="../privacy-policy"
                       style={{ padding: "10px 24px" }}
                     >
                       Privacy Policy
                     </Nav.Link>
                     <Nav.Link
-                      href="terms-and-conditions"
+                      href="../terms-and-conditions"
                       style={{ padding: "10px 24px" }}
                     >
                       Terms and Conditions
@@ -173,14 +173,14 @@ export default function Header() {
               >
                 {!user && (
                   <>
-                    <Dropdown.Item href="privacy-policy">
+                    <Dropdown.Item href="../privacy-policy">
                       Privacy Policy
                     </Dropdown.Item>
                   </>
                 )}
                 {!user && (
                   <>
-                    <Dropdown.Item href="terms-and-conditions">
+                    <Dropdown.Item href="../terms-and-conditions">
                       Terms and Conditions
                     </Dropdown.Item>
                   </>
@@ -397,7 +397,9 @@ function Signup(props) {
                 label={
                   <>
                     I have read and accept the{" "}
-                    <Link to="/terms-and-conditions">terms and conditions</Link>
+                    <Link to="../terms-and-conditions">
+                      terms and conditions
+                    </Link>
                   </>
                 }
                 onChange={(e) => setConfirmedTerms(e.target.checked)}
