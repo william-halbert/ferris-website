@@ -90,6 +90,21 @@ export default function Header() {
               />
             </Link>
           </Navbar.Brand>
+          <Button
+            style={{
+              color: "white",
+              background: "none",
+              border: "3px solid white",
+              fontSize: "24px",
+            }}
+            onClick={() => {
+              window.open("https://study.ferris.so", "_blank");
+            }}
+            className="navbar-study-button"
+          >
+            Study
+          </Button>
+          {/*
           <Navbar.Toggle
             className="mobile-menu-icon"
             aria-controls="basic-navbar-nav"
@@ -202,7 +217,7 @@ export default function Header() {
                 )}
               </Dropdown.Menu>
             </Dropdown>
-          </Navbar.Collapse>
+                    </Navbar.Collapse>*/}
         </Container>
       </Navbar>
     </>

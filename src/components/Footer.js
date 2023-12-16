@@ -22,6 +22,13 @@ export default function Footer() {
       width: "250px",
       marginBottom: "10px",
     },
+    gradient: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     footerInstagramIcon: {
       color: "white",
       fontSize: "36px",

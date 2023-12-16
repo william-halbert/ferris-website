@@ -20,6 +20,8 @@ import Pdf from "./Pdf";
 import Ppt from "./Ppt";
 import Dashboard from "./Dashboard";
 import Image from "./Image";
+import Study from "./Study";
+import Auth from "./Auth";
 
 function App() {
   return (
@@ -33,20 +35,11 @@ function App() {
         <Router>
           <AuthProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/library" element={<Dashboard />} />
-              <Route path="/image" element={<Image />} />
-              <Route path="/notebook" element={<Notebook />} />
-              <Route path="/pdf" element={<Pdf />} />
-              <Route path="/ppt" element={<Ppt />} />
+              <Route path="/" element={<Study />} />
+              <Route path="/auth" element={<Auth />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/in-class" element={<InClass />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/terms-and-conditions" element={<Terms />} />
               <Route path="/privacy-policy" element={<Privacy />} />
-
               <Route
                 path="/chat"
                 element={
@@ -54,14 +47,6 @@ function App() {
                     <DndProvider backend={HTML5Backend}>
                       <AudioToText />
                     </DndProvider>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/my-credits"
-                element={
-                  <PrivateRoute>
-                    <MyCredits />
                   </PrivateRoute>
                 }
               />

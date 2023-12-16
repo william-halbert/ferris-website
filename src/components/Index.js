@@ -55,14 +55,38 @@ export default function Index() {
             className="hero-text"
           >
             <h1 className="ntr hero-text-h1" style={{ fontSize: "48px" }}>
-              Auto-generate notes
+              Take photos, take notes
             </h1>
             <h3
               className="ntr hero-text-h3"
               style={{ width: "70vw", fontSize: "32px" }}
+            ></h3>
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              top: "80%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              color: "black",
+              fontWeight: "bold",
+            }}
+            className="hero-text"
+          >
+            <h1
+              className="ntr hero-button"
+              style={{
+                fontSize: "80px",
+                background: "rgba(255,255,255,.7)",
+                padding: "10px 20px",
+                borderRadius: "10px",
+              }}
+              onClick={() => {
+                window.open("https://study.ferris.so", "_blank");
+              }}
             >
-              More time understanding class, and less time writing
-            </h3>
+              Study
+            </h1>
           </div>
         </div>
 

@@ -1,4 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -18,6 +20,13 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
+import {
+  getStorage,
+  ref,
+  uploadString,
+  getDownloadURL,
+} from "firebase/storage";
+
 import { db } from "../firebase";
 
 const AuthContext = React.createContext();
@@ -30,8 +39,56 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState();
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState("");
+  const storage = getStorage();
+  const [noteInfo, setNoteInfo] = useState({ className: "", noteName: "" });
 
   const auth = getAuth();
+
+  async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // This gives you a Google Access Token which you can use to access the Google API.
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential.accessToken;
+      // The signed-in user info.
+      const user = result.user;
+      // You can now use this to set your user in state or context
+      setCurrentUser(user);
+      return { success: true };
+    } catch (error) {
+      // Handle Errors here.
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      // The email of the user's account used.
+      const email = error.email;
+      // The AuthCredential type that was used.
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      // You can now use this to display an error message
+      setAuthError(errorMessage);
+      return { success: false, errorMessage };
+    }
+  }
+
+  async function uploadLectureImage(base64) {
+    const storageRef = ref(storage, "some-child");
+
+    try {
+      const snapshot = await uploadString(storageRef, base64, "base64");
+      console.log("Uploaded a base64 string!");
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return {
+        success: true,
+        downloadURL: downloadURL,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.message,
+      };
+    }
+  }
+
   async function signup(email, password) {
     try {
       const { user } = await createUserWithEmailAndPassword(
@@ -158,6 +215,34 @@ export function AuthProvider({ children }) {
         doc(db, "users", uid, "foldersAndChats", chatId),
         {
           messages: conversation,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving conversation to Firestore: ", error);
+    }
+  }
+
+  async function saveNoteResponse(uid, className, noteTitle, responses) {
+    try {
+      await setDoc(
+        doc(db, "users", String(uid), "classes", className, "notes", noteTitle),
+        {
+          responses: responses,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving conversation to Firestore: ", error);
+    }
+  }
+
+  async function saveGptResponse(uid, className, noteTitle, responses) {
+    try {
+      await setDoc(
+        doc(db, "users", String(uid), "classes", className, "notes", noteTitle),
+        {
+          gptResponses: responses,
         },
         { merge: true }
       );
@@ -317,6 +402,7 @@ export function AuthProvider({ children }) {
       createdDate: Timestamp.fromDate(new Date()),
       plan: "FreeTrial",
       minutesRemaing: 720,
+      credits: 0,
       email: email,
     };
     try {
@@ -362,12 +448,11 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function createNote(uid, className, noteTitle, noteContent) {
+  async function createNote(uid, className, noteTitle) {
     const docData = {
       userId: String(uid),
       className: className,
       noteTitle: noteTitle,
-      noteContent: noteContent,
       createdDate: Timestamp.fromDate(new Date()),
     };
     try {
@@ -379,6 +464,72 @@ export function AuthProvider({ children }) {
       console.error(e);
     }
   }
+
+  async function getClass(uid, className) {
+    const docRef = doc(db, "users", uid, "classes", className);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      console.log("No such class!");
+      return null;
+    }
+    return docSnap.data();
+  }
+
+  async function getNote(uid, className, noteTitle) {
+    const docRef = doc(
+      db,
+      "users",
+      uid,
+      "classes",
+      className,
+      "notes",
+      noteTitle
+    );
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      console.log("No such note!");
+      return null;
+    }
+    return docSnap.data();
+  }
+
+  async function getAllClassNames(uid) {
+    const classesRef = collection(db, "users", uid, "classes");
+    const querySnapshot = await getDocs(classesRef);
+
+    const classObjects = querySnapshot.docs.map((doc) => {
+      return {
+        className: doc.id, // className key now holds the document ID which is the class name
+        ...doc.data(), // Spreading other data that may exist in the document
+      };
+    });
+
+    return classObjects;
+  }
+
+  async function getAllNotes(uid, className) {
+    const notesRef = collection(
+      db,
+      "users",
+      uid,
+      "classes",
+      className,
+      "notes"
+    );
+    const querySnapshot = await getDocs(notesRef);
+
+    const notes = querySnapshot.docs.map((doc) => {
+      return {
+        noteTitle: doc.id,
+        ...doc.data(),
+      };
+    });
+
+    return notes;
+  }
+
   const value = {
     loading,
     authError,
@@ -387,22 +538,20 @@ export function AuthProvider({ children }) {
     logout,
     resetPassword,
     createUser,
-    createFoldersAndChats,
-    saveChat,
-    saveTranscript,
-    getChat,
-    getSidebarInfo,
-    setItemParent,
-    moveToTrash,
-    moveToLive,
-    saveItemName,
-    saveTranscriptSummary,
-    removeCredits,
     getUser,
-    saveFolderIsOpen,
-    saveTranscribing,
-    saveProgress,
     verifyEmail,
+    uploadLectureImage,
+    createClass,
+    createNote,
+    getClass,
+    getNote,
+    getAllClassNames,
+    getAllNotes,
+    saveNoteResponse,
+    saveGptResponse,
+    noteInfo,
+    setNoteInfo,
+    signInWithGoogle,
   };
 
   return (
