@@ -39,7 +39,7 @@ export default function Study() {
       height: "150px",
       opacity: 1,
       scale: 1,
-      transition: { duration: 1.5 },
+      transition: { duration: 2 },
       position: "fixed",
       top: "16px",
       left: "16px",

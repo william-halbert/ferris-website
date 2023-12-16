@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import "./Auth.css"; // Make sure to update the CSS file with the provided styles
-import convertibleBackground from "../images/convertible.jpeg"; // Ensure the image path is correct
-import googleLogo from "../images/google.png"; // Ensure the image path is correct
+import "./Auth.css";
+import convertibleBackground from "../images/convertible.png";
+import googleLogo from "../images/google.png";
 import { useAuth } from "../contexts/AuthContext";
 import { getAuth } from "firebase/auth";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Nav,
@@ -25,6 +25,22 @@ export default function Auth() {
   const [password, setPassword] = useState(""); // State to hold the password
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const containerStyle = {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundImage: `url(${convertibleBackground})`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "center center",
+    backgroundSize: "cover",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backdropFilter: "blur(8px)", // Blur effect
+  };
 
   useEffect(() => {
     async function authorize() {
@@ -129,10 +145,7 @@ export default function Auth() {
     }
   }
   return (
-    <div
-      className="auth-container"
-      style={{ backgroundImage: `url(${convertibleBackground})` }}
-    >
+    <div className="auth-container" style={containerStyle}>
       <div className="auth-modal">
         {authStep === "email" && (
           <>
