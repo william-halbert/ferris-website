@@ -1,34 +1,88 @@
 import { AirlineSeatReclineNormalRounded } from "@mui/icons-material";
 import React, { useState, useEffect } from "react";
-import BackpackImg from "../images/backpackBlue.png";
 import Spiral from "../images/spiral.png";
 import { useAuth } from "../contexts/AuthContext";
 import { getAuth } from "firebase/auth";
 import NotebookContent from "./NotebookContent";
+import BackpackImg from "../images/unzippedBackpackBlue.png";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
 
 function ListOfNotebooks() {
   const [hoveredNotebook, setHoveredNotebook] = useState(null);
   const [openNotebook, setOpenNotebook] = useState(null);
   const [color, setColor] = useState(null);
   const auth = getAuth();
+  const { getUser, createClass, getAllClassNames, deleteNotebook } = useAuth();
   const user = auth.currentUser;
-  const [classes, setClasses] = useState([]);
-  const { getUser, createClass, getAllClassNames } = useAuth();
   const [inputClassName, setInputClassName] = useState(null);
-  const [dialogVisible, setDialogVisible] = useState(null);
-  const handleCreateClass = async () => {
-    if (inputClassName) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [notebookToDelete, setNotebookToDelete] = useState(null);
+  const handleDeleteClick = (event, notebook) => {
+    event.stopPropagation(); // Prevents event from bubbling up to parent elements
+    setNotebookToDelete(notebook);
+    setDeleteDialogOpen(true);
+  };
+  const handleDeleteConfirm = async () => {
+    if (notebookToDelete) {
       try {
-        await createClass(user.uid, inputClassName);
-        setClasses((prevClasses) => [
+        // Call the deleteNotebook function from your auth context
+        await deleteNotebook(String(user.uid), notebookToDelete.name);
+
+        // Filter out the deleted notebook and update the state
+        setNotebooks(notebooks.filter((n) => n.name !== notebookToDelete.name));
+
+        // Close the confirmation dialog
+        setDeleteDialogOpen(false);
+        setNotebookToDelete(null);
+      } catch (error) {
+        console.error("Error deleting the notebook:", error);
+        // Optionally, you can show an error message to the user
+      }
+    }
+  };
+  const [newNotebookName, setNewNotebookName] = useState("");
+  const [notebooks, setNotebooks] = useState([{ name: "Add New" }]);
+  const handleDialogOpen = () => {
+    setIsDialogOpen(true);
+  };
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+  };
+  const handleAddNewNotebook = () => {
+    if (newNotebookName.trim()) {
+      setNotebooks([...notebooks, { name: newNotebookName }]);
+      setNewNotebookName("");
+    }
+    handleDialogClose();
+  };
+
+  const handleCreateClass = async () => {
+    console.log("handleCreateClass called with:", newNotebookName); // Debugging output
+
+    if (newNotebookName) {
+      // Ensure we are using the correct state variable
+      try {
+        await createClass(user.uid, newNotebookName); // Create class
+        console.log("Class created successfully"); // Debugging output
+
+        setNotebooks((prevClasses) => [
           ...prevClasses,
-          { className: inputClassName },
+          { name: newNotebookName },
         ]);
-        setInputClassName("");
-        setDialogVisible(false);
+        setNewNotebookName(""); // Reset input field
+        setIsDialogOpen(false); // Close dialog
       } catch (error) {
         console.error("Error creating class:", error);
+        // Optionally, show an error message to the user
       }
+    } else {
+      console.log("No class name provided"); // Debugging output
     }
   };
   useEffect(() => {
@@ -36,18 +90,27 @@ function ListOfNotebooks() {
       if (user) {
         try {
           const userClasses = await getAllClassNames(user.uid);
-          setClasses(userClasses);
-          console.log(userClasses);
+          console.log("Fetched classes:", userClasses);
+          if (userClasses && Array.isArray(userClasses)) {
+            // Filter to only include "live" notebooks and prepend the "Add New" notebook
+            const liveNotebooks = userClasses
+              .filter((c) => c.status === "live") // Filter for live notebooks
+              .map((c) => ({ name: c.className, status: c.status }));
+
+            setNotebooks([{ name: "Add New" }, ...liveNotebooks]);
+          } else {
+            console.error("Invalid data format received");
+          }
         } catch (error) {
           console.error("Failed to fetch classes:", error);
         }
       } else {
-        console.log("no user");
+        console.log("No user found");
       }
     }
 
-    //fetchClasses();
-  }, []);
+    fetchClasses();
+  }, [user, getAllClassNames]);
 
   const colors = [
     "white",
@@ -72,38 +135,17 @@ function ListOfNotebooks() {
   const handleGoBack = () => {
     setOpenNotebook(null);
   };
+  /*
   const notebooks = [
     { name: "Add New" },
-    {
-      name: "Chemistry",
-      content: [
-        "Lecture 1",
-        "Lecture 2",
-        "Lecture 3",
-        "Lecture 4",
-        "Lecture 5",
-        "Lecture 6",
-        "Lecture 7",
-        "Lecture 8",
-        "Lecture 9",
-        "Lecture 2",
-        "Lecture 3",
-        "Lecture 4",
-        "Lecture 5",
-        "Lecture 6",
-        "Lecture 7",
-        "Lecture 8",
-        "Lecture 9",
-        "Lecture 2",
-        "Lecture 3",
-        "Lecture 4",
-        "Lecture 5",
-        "Lecture 6",
-        "Lecture 7",
-        "Lecture 8",
-        "Lecture 9",
-      ],
-    },
+
+    
+    { name: "Calculus II", content: ["Lecture 1", "Lecture 2"] },
+    { name: "Biology II", content: ["Lecture 1", "Lecture 2"] },
+    { name: "Physics II", content: ["Lecture 1", "Lecture 2"] },
+    { name: "Psychology", content: ["Lecture 1", "Lecture 2"] },
+    { name: "Fluid Mechanics", content: ["Lecture 1", "Lecture 2"] },
+    { name: "Solidworks", content: ["Lecture 1", "Lecture 2"] },
     { name: "Calculus II", content: ["Lecture 1", "Lecture 2"] },
     { name: "Biology II", content: ["Lecture 1", "Lecture 2"] },
     { name: "Physics II", content: ["Lecture 1", "Lecture 2"] },
@@ -112,7 +154,7 @@ function ListOfNotebooks() {
     { name: "Solidworks", content: ["Lecture 1", "Lecture 2"] },
 
     // ... any number of notebooks
-  ];
+  ];*/
   const inlineStyles = {
     backpack: {
       display: "flex",
@@ -121,11 +163,11 @@ function ListOfNotebooks() {
       margin: "20px 100px",
     },
     notebooks: {
-      margin: "10px 200px",
+      margin: "20px 200px 100px 30vw",
       display: "flex",
       justifyContent: "space-around",
       alignItems: "center",
-      width: "100%",
+      width: "70vw",
       flexWrap: "wrap", // This allows the items to wrap to the next line
       justifyContent: "flex-start",
       gap: "100px",
@@ -169,15 +211,18 @@ function ListOfNotebooks() {
 
   return (
     <div style={inlineStyles.backpack}>
-      <h1
+      <img
+        src={BackpackImg}
         onClick={handleGoBack}
-        style={{ fontSize: "50px", cursor: "pointer" }}
-      >
-        <img
-          src={BackpackImg}
-          style={{ height: "100px", marginRight: "15px" }}
-        />
-      </h1>
+        style={{
+          position: "fixed",
+          top: "16px",
+          left: "16px",
+          height: "150px",
+          width: "150px",
+          cursor: "pointer",
+        }}
+      />
       {openNotebook ? (
         <NotebookContent notebook={openNotebook} goBack={handleGoBack} />
       ) : (
@@ -189,14 +234,16 @@ function ListOfNotebooks() {
               onMouseLeave={() => setHoveredNotebook(null)}
               onClick={() => {
                 if (index !== 0) {
-                  // Prevent "Add New" from being set as the open notebook
                   setOpenNotebook({
                     ...notebook,
                     color: getNotebookStyle(index).backgroundColor,
                   });
+                } else {
+                  // Only for the "Add New" notebook, display the button to open dialog
+                  handleDialogOpen();
                 }
               }}
-              key={notebook.name}
+              key={notebook.className || index}
             >
               <img
                 src={Spiral}
@@ -213,12 +260,52 @@ function ListOfNotebooks() {
               {index === 0 ? (
                 <span style={inlineStyles.addIcon}>+</span>
               ) : (
-                <span style={inlineStyles.icon(index)}>X</span>
+                <span
+                  style={inlineStyles.icon(index)}
+                  onClick={(e) => handleDeleteClick(e, notebook)} // Pass the event and notebook
+                >
+                  X
+                </span>
               )}
             </div>
           ))}
         </div>
       )}
+      {/* Dialog for creation */}
+
+      <Dialog open={isDialogOpen} onClose={handleDialogClose}>
+        <DialogTitle>Add New Notebook</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Notebook Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newNotebookName}
+            onChange={(e) => setNewNotebookName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose}>Cancel</Button>
+          <Button onClick={handleCreateClass}>Add</Button>
+        </DialogActions>
+      </Dialog>
+      {/* Confirmation dialog for deletion */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this notebook?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm}>Delete</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

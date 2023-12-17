@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import BackpackImg from "../images/backpackBlue.png";
 import UnzippedImg from "../images/unzippedBackpackBlue.png";
 import { motion } from "framer-motion";
+import ListOfNotebooks from "./ListOfNotebooks";
 
 export default function Study() {
   const auth = getAuth();
@@ -11,20 +12,26 @@ export default function Study() {
   const navigate = useNavigate();
   const [needsAnimating, setNeedsAnimating] = useState(true); // Renamed for clarity
   const [isAnimating, setIsAnimating] = useState(true);
+  const [showNotebooks, setShowNotebooks] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate("/auth");
     }
 
-    // Start the animation 1 second after the component mounts if needed
     if (needsAnimating) {
       const timeoutId = setTimeout(() => {
         setIsAnimating(false);
       }, 1000);
 
-      // Clean up the timeout when the component unmounts
-      return () => clearTimeout(timeoutId);
+      const notebookTimeoutId = setTimeout(() => {
+        setShowNotebooks(true);
+      }, 3500);
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(notebookTimeoutId);
+      };
     }
   }, [user, navigate, needsAnimating]);
 
@@ -47,36 +54,28 @@ export default function Study() {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-      }}
-    >
-      {needsAnimating ? (
-        <motion.img
-          src={isAnimating ? BackpackImg : UnzippedImg}
-          alt="Backpack"
-          initial="centered"
-          animate={isAnimating ? "centered" : "topLeft"}
-          variants={backpackVariants}
-          style={{ maxWidth: "80vw", maxHeight: "80vh" }}
-        />
-      ) : (
-        <img
-          src={UnzippedImg}
-          alt="Unzipped Backpack"
+    <>
+      {needsAnimating && !showNotebooks ? (
+        <div
           style={{
-            position: "fixed",
-            top: "16px",
-            left: "16px",
-            width: "150px",
-            height: "150px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100vh",
           }}
-        />
-      )}
-    </div>
+        >
+          <motion.img
+            src={isAnimating ? BackpackImg : UnzippedImg}
+            alt="Backpack"
+            initial="centered"
+            animate={isAnimating ? "centered" : "topLeft"}
+            variants={backpackVariants}
+            style={{ maxWidth: "80vw", maxHeight: "80vh" }}
+          />{" "}
+        </div>
+      ) : showNotebooks ? (
+        <ListOfNotebooks />
+      ) : null}
+    </>
   );
 }
