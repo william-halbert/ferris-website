@@ -11,6 +11,9 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { Menu, MenuItem } from "@mui/material";
+import "./ListOfNotebooks.css";
 
 function ListOfNotebooks() {
   const [hoveredNotebook, setHoveredNotebook] = useState(null);
@@ -23,8 +26,30 @@ function ListOfNotebooks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [notebookToDelete, setNotebookToDelete] = useState(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const openMenu = Boolean(menuAnchorEl);
+
+  const handleMenuClick = (event, notebook) => {
+    event.stopPropagation();
+    if (menuAnchorEl === event.currentTarget) {
+      // If the current menu is already open for this notebook, close it
+      setMenuAnchorEl(null);
+    } else {
+      // Otherwise, open the menu for this notebook
+      setMenuAnchorEl(event.currentTarget);
+    }
+  };
+
+  const handleMenuClose = (event) => {
+    // Check if the event exists and stop propagation
+    if (event) {
+      event.stopPropagation();
+    }
+    setMenuAnchorEl(null);
+  };
   const handleDeleteClick = (event, notebook) => {
     event.stopPropagation(); // Prevents event from bubbling up to parent elements
+    setMenuAnchorEl(null);
     setNotebookToDelete(notebook);
     setDeleteDialogOpen(true);
   };
@@ -203,6 +228,17 @@ function ListOfNotebooks() {
       fontWeight: "bold",
       cursor: "pointer",
     },
+    menuIcon: (id) => ({
+      position: "absolute",
+      top: "5px",
+      right: "5px",
+      display: hoveredNotebook === id ? "block" : "none",
+      cursor: "pointer",
+      "&:hover": {
+        backgroundColor: "black",
+        borderRadius: "50%",
+      },
+    }),
   };
   const notebooksWithColor = notebooks.map((notebook, index) => ({
     ...notebook,
@@ -255,18 +291,45 @@ function ListOfNotebooks() {
                 }}
               />
               {index !== 0 && (
+                <>
+                  <MoreVertIcon
+                    className={`menu-icon ${
+                      hoveredNotebook === index ? "" : "hidden"
+                    }`}
+                    onClick={(e) => handleMenuClick(e, notebook)}
+                  />
+                  <Menu
+                    anchorEl={menuAnchorEl}
+                    open={openMenu}
+                    onClose={handleMenuClose}
+                    PaperProps={{
+                      style: {
+                        transform: "translate3d(0,0,0)", // Reset transform to default if needed
+                      },
+                    }}
+                  >
+                    <MenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      Rename
+                    </MenuItem>
+                    <MenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(e, notebook);
+                      }}
+                    >
+                      Delete
+                    </MenuItem>
+                  </Menu>
+                </>
+              )}
+              {index !== 0 && (
                 <span style={inlineStyles.title}>{notebook.name}</span>
               )}
-              {index === 0 ? (
-                <span style={inlineStyles.addIcon}>+</span>
-              ) : (
-                <span
-                  style={inlineStyles.icon(index)}
-                  onClick={(e) => handleDeleteClick(e, notebook)} // Pass the event and notebook
-                >
-                  X
-                </span>
-              )}
+              {index === 0 && <span style={inlineStyles.addIcon}>+</span>}
             </div>
           ))}
         </div>
