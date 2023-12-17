@@ -326,7 +326,22 @@ export function AuthProvider({ children }) {
     return notes;
   }
 
+  async function editNotebookName(uid, name, newname) {
+    try {
+      await setDoc(
+        doc(db, "users", uid, "classes", name),
+        {
+          name: newname,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving Item Name to Firestore: ", error);
+    }
+  }
+
   const value = {
+    editNotebookName,
     signup,
     login,
     logout,

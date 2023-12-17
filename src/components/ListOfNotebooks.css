@@ -1,9 +1,9 @@
 .menu-icon {
   position: absolute;
   top: 5px;
-  right: 5px;
+  right: 3px;
   cursor: pointer;
-  font-size: 28px;
+  font-size: 36px;
 }
 
 .menu-icon:hover {

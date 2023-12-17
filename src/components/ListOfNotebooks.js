@@ -20,7 +20,13 @@ function ListOfNotebooks() {
   const [openNotebook, setOpenNotebook] = useState(null);
   const [color, setColor] = useState(null);
   const auth = getAuth();
-  const { getUser, createClass, getAllClassNames, deleteNotebook } = useAuth();
+  const {
+    getUser,
+    createClass,
+    getAllClassNames,
+    deleteNotebook,
+    editNotebookName,
+  } = useAuth();
   const user = auth.currentUser;
   const [inputClassName, setInputClassName] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -28,6 +34,46 @@ function ListOfNotebooks() {
   const [notebookToDelete, setNotebookToDelete] = useState(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const openMenu = Boolean(menuAnchorEl);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [notebookToRename, setNotebookToRename] = useState(null);
+  const [renamedNotebookName, setRenamedNotebookName] = useState("");
+
+  const handleRenameClick = (event, notebook) => {
+    event.stopPropagation();
+    setMenuAnchorEl(null);
+    setNotebookToRename(notebook);
+    setRenamedNotebookName(notebook.name);
+    setRenameDialogOpen(true);
+  };
+
+  const handleRenameConfirm = async () => {
+    if (notebookToRename && renamedNotebookName) {
+      try {
+        // Call the editNotebookName function from your auth context
+        await editNotebookName(
+          String(user.uid),
+          notebookToRename.name,
+          renamedNotebookName
+        );
+
+        // Update the notebook name in the state
+        setNotebooks(
+          notebooks.map((n) =>
+            n.name === notebookToRename.name
+              ? { ...n, name: renamedNotebookName }
+              : n
+          )
+        );
+
+        // Close the rename dialog
+        setRenameDialogOpen(false);
+        setNotebookToRename(null);
+      } catch (error) {
+        console.error("Error renaming the notebook:", error);
+        // Optionally, you can show an error message to the user
+      }
+    }
+  };
 
   const handleMenuClick = (event, notebook) => {
     event.stopPropagation();
@@ -311,6 +357,7 @@ function ListOfNotebooks() {
                     <MenuItem
                       onClick={(e) => {
                         e.stopPropagation();
+                        handleRenameClick(e, notebook);
                       }}
                     >
                       Rename
@@ -367,6 +414,28 @@ function ListOfNotebooks() {
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleDeleteConfirm}>Delete</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={renameDialogOpen}
+        onClose={() => setRenameDialogOpen(false)}
+      >
+        <DialogTitle>Rename Notebook</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="New Notebook Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={renamedNotebookName}
+            onChange={(e) => setRenamedNotebookName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleRenameConfirm}>Rename</Button>
         </DialogActions>
       </Dialog>
     </div>
