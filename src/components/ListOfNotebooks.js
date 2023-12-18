@@ -52,19 +52,19 @@ function ListOfNotebooks() {
         // Call the editNotebookName function from your auth context
         await editNotebookName(
           String(user.uid),
-          notebookToRename.name,
+          String(notebookToRename.classId),
           renamedNotebookName
         );
 
         // Update the notebook name in the state
         setNotebooks(
           notebooks.map((n) =>
-            n.name === notebookToRename.name
+            n.classId === notebookToRename.classId
               ? { ...n, name: renamedNotebookName }
               : n
           )
         );
-
+        setRenamedNotebookName("");
         // Close the rename dialog
         setRenameDialogOpen(false);
         setNotebookToRename(null);
@@ -103,10 +103,15 @@ function ListOfNotebooks() {
     if (notebookToDelete) {
       try {
         // Call the deleteNotebook function from your auth context
-        await deleteNotebook(String(user.uid), notebookToDelete.name);
+        await deleteNotebook(
+          String(user.uid),
+          String(notebookToDelete.classId)
+        );
 
         // Filter out the deleted notebook and update the state
-        setNotebooks(notebooks.filter((n) => n.name !== notebookToDelete.name));
+        setNotebooks(
+          notebooks.filter((n) => n.classId !== notebookToDelete.classId)
+        );
 
         // Close the confirmation dialog
         setDeleteDialogOpen(false);
@@ -139,7 +144,7 @@ function ListOfNotebooks() {
     if (newNotebookName) {
       // Ensure we are using the correct state variable
       try {
-        await createClass(user.uid, newNotebookName); // Create class
+        await createClass(String(user.uid), newNotebookName); // Create class
         console.log("Class created successfully"); // Debugging output
 
         setNotebooks((prevClasses) => [
@@ -166,7 +171,11 @@ function ListOfNotebooks() {
             // Filter to only include "live" notebooks and prepend the "Add New" notebook
             const liveNotebooks = userClasses
               .filter((c) => c.status === "live") // Filter for live notebooks
-              .map((c) => ({ name: c.className, status: c.status }));
+              .map((c) => ({
+                name: c.className,
+                status: c.status,
+                classId: c.classId,
+              }));
 
             setNotebooks([{ name: "Add New" }, ...liveNotebooks]);
           } else {
@@ -234,7 +243,7 @@ function ListOfNotebooks() {
       margin: "20px 100px",
     },
     notebooks: {
-      margin: "20px 200px 100px 30vw",
+      margin: "40px 200px 100px 20vw",
       display: "flex",
       justifyContent: "space-around",
       alignItems: "center",
@@ -270,21 +279,26 @@ function ListOfNotebooks() {
       fontSize: "30px",
     }),
     addIcon: {
-      fontSize: "50px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "36px",
       fontWeight: "bold",
       cursor: "pointer",
+      textAlign: "center",
+      position: "relative",
+      top: "-10px",
     },
-    menuIcon: (id) => ({
-      position: "absolute",
-      top: "5px",
-      right: "5px",
-      display: hoveredNotebook === id ? "block" : "none",
-      cursor: "pointer",
-      "&:hover": {
-        backgroundColor: "black",
-        borderRadius: "50%",
-      },
-    }),
+
+    newNotebook: {
+      fontSize: "20px",
+      color: "black",
+      marginLeft: "8px",
+      fontWeight: "none",
+      margin: "0",
+    },
+    plus: { margin: "0" },
   };
   const notebooksWithColor = notebooks.map((notebook, index) => ({
     ...notebook,
@@ -292,7 +306,7 @@ function ListOfNotebooks() {
   }));
 
   return (
-    <div style={inlineStyles.backpack}>
+    <div>
       <img
         src={BackpackImg}
         onClick={handleGoBack}
@@ -300,8 +314,8 @@ function ListOfNotebooks() {
           position: "fixed",
           top: "16px",
           left: "16px",
-          height: "150px",
-          width: "150px",
+          height: "160px",
+          width: "160px",
           cursor: "pointer",
         }}
       />
@@ -325,7 +339,7 @@ function ListOfNotebooks() {
                   handleDialogOpen();
                 }
               }}
-              key={notebook.className || index}
+              key={notebook.classId || index}
             >
               <img
                 src={Spiral}
@@ -376,7 +390,12 @@ function ListOfNotebooks() {
               {index !== 0 && (
                 <span style={inlineStyles.title}>{notebook.name}</span>
               )}
-              {index === 0 && <span style={inlineStyles.addIcon}>+</span>}
+              {index === 0 && (
+                <span style={inlineStyles.addIcon}>
+                  <span style={inlineStyles.plus}>+</span>
+                  <span style={inlineStyles.newNotebook}>New Lecture</span>
+                </span>
+              )}
             </div>
           ))}
         </div>

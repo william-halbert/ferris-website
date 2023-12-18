@@ -1,5 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { v4 as uuidv4 } from "uuid";
 
 import {
   getAuth,
@@ -83,10 +84,10 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function deleteNotebook(uid, name) {
+  async function deleteNotebook(uid, classId) {
     try {
       await setDoc(
-        doc(db, "users", uid, "classes", name),
+        doc(db, "users", uid, "classes", classId),
         {
           status: "deleted",
         },
@@ -228,23 +229,51 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function createClass(uid, className) {
+    const classId = uuidv4();
     const docData = {
       userId: String(uid),
       className: className,
       createdDate: Timestamp.fromDate(new Date()),
       status: "live",
+      classId: classId,
     };
     try {
       const docRef = await setDoc(
-        doc(db, "users", uid, "classes", className),
+        doc(db, "users", uid, "classes", classId),
         docData
       );
     } catch (e) {
       console.error(e);
     }
   }
-
-  async function createNote(uid, className, noteTitle) {
+  async function createLecture(
+    uid,
+    classId,
+    className,
+    lectureName,
+    abbrevDate
+  ) {
+    const lectureId = uuidv4();
+    const docData = {
+      userId: String(uid),
+      lectureName: lectureName,
+      className: className,
+      abbrevDate: abbrevDate,
+      classId: String(classId),
+      createdDate: Timestamp.fromDate(new Date()),
+      status: "live",
+      lectureId: String(lectureId),
+    };
+    try {
+      const docRef = await setDoc(
+        doc(db, "users", uid, "classes", classId, "lectures", lectureId),
+        docData
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  async function createNote(uid, classId, className, noteTitle) {
     const docData = {
       userId: String(uid),
       className: className,
@@ -326,12 +355,12 @@ export function AuthProvider({ children }) {
     return notes;
   }
 
-  async function editNotebookName(uid, name, newname) {
+  async function editNotebookName(uid, classId, newname) {
     try {
       await setDoc(
-        doc(db, "users", uid, "classes", name),
+        doc(db, "users", uid, "classes", classId),
         {
-          name: newname,
+          className: newname,
         },
         { merge: true }
       );
@@ -360,6 +389,7 @@ export function AuthProvider({ children }) {
     setNoteInfo,
     signInWithGoogle,
     deleteNotebook,
+    createLecture,
   };
 
   return (
