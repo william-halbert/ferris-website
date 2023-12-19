@@ -393,7 +393,7 @@ function ListOfNotebooks() {
               {index === 0 && (
                 <span style={inlineStyles.addIcon}>
                   <span style={inlineStyles.plus}>+</span>
-                  <span style={inlineStyles.newNotebook}>New Lecture</span>
+                  <span style={inlineStyles.newNotebook}>New Notebook</span>
                 </span>
               )}
             </div>
