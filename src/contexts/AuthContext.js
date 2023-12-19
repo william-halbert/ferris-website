@@ -98,6 +98,28 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function deleteLecture(uid, classId, lectureId) {
+    try {
+      const docRef = doc(
+        db,
+        "users",
+        uid,
+        "classes",
+        classId,
+        "lectures",
+        lectureId
+      );
+
+      console.log(`Attempting to update: ${docRef.path}`);
+
+      await setDoc(docRef, { status: "deleted" }, { merge: true });
+
+      console.log("Lecture status updated to 'deleted'");
+    } catch (error) {
+      console.error("Error moving item to trash in Firestore: ", error);
+    }
+  }
+
   async function uploadLectureImage(base64) {
     const storageRef = ref(storage, "some-child");
 
@@ -251,9 +273,9 @@ export function AuthProvider({ children }) {
     classId,
     className,
     lectureName,
-    abbrevDate
+    abbrevDate,
+    lectureId
   ) {
-    const lectureId = uuidv4();
     const docData = {
       userId: String(uid),
       lectureName: lectureName,
@@ -334,6 +356,26 @@ export function AuthProvider({ children }) {
     return classObjects;
   }
 
+  async function getAllLectureNames(uid, classId) {
+    const classesRef = collection(
+      db,
+      "users",
+      String(uid),
+      "classes",
+      String(classId),
+      "lectures"
+    );
+    const querySnapshot = await getDocs(classesRef);
+
+    const LectureObjects = querySnapshot.docs.map((doc) => {
+      return {
+        ...doc.data(),
+      };
+    });
+
+    return LectureObjects;
+  }
+
   async function getAllNotes(uid, className) {
     const notesRef = collection(
       db,
@@ -369,6 +411,20 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function editLectureName(uid, classId, lectureId, newname) {
+    try {
+      await setDoc(
+        doc(db, "users", uid, "classes", classId, "lectures", lectureId),
+        {
+          lectureName: newname,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving Item Name to Firestore: ", error);
+    }
+  }
+
   const value = {
     editNotebookName,
     signup,
@@ -390,6 +446,9 @@ export function AuthProvider({ children }) {
     signInWithGoogle,
     deleteNotebook,
     createLecture,
+    getAllLectureNames,
+    deleteLecture,
+    editLectureName,
   };
 
   return (

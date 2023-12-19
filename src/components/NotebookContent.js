@@ -12,6 +12,7 @@ import Button from "@mui/material/Button";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { Menu, MenuItem } from "@mui/material";
 import "./NotebookContent.css";
+import { v4 as uuidv4 } from "uuid";
 
 export default function NotebookContent({ notebook, goBack }) {
   const [selectedLecture, setSelectedLecture] = useState(null);
@@ -24,10 +25,49 @@ export default function NotebookContent({ notebook, goBack }) {
   const [renamedLectureName, setRenamedLectureName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lectureToDelete, setLectureToDelete] = useState(null);
-  const { createLecture, getAllLectures } = useAuth();
+  const { editLectureName, createLecture, getAllLectureNames, deleteLecture } =
+    useAuth();
   const [lectures, setLectures] = useState([]);
   const auth = getAuth();
   const user = auth.currentUser;
+  const [selectedMenuLecture, setSelectedMenuLecture] = useState(null);
+
+  useEffect(() => {
+    async function fetchClasses() {
+      if (user) {
+        try {
+          const userLectures = await getAllLectureNames(
+            user.uid,
+            notebook.classId
+          );
+          console.log("Fetched lectures:", userLectures);
+          if (userLectures && Array.isArray(userLectures)) {
+            // Filter to only include "live" notebooks and prepend the "Add New" notebook
+            const liveLectures = userLectures
+              .filter((l) => l.status === "live") // Filter for live notebooks
+              .map((l) => ({
+                lectureName: l.lectureName,
+                status: l.status,
+                lectureId: l.lectureId,
+                abbrevDate: l.abbrevDate,
+                className: l.className,
+                classId: l.classId,
+              }));
+
+            setLectures([...liveLectures]);
+          } else {
+            console.error("Invalid data format received");
+          }
+        } catch (error) {
+          console.error("Failed to fetch classes:", error);
+        }
+      } else {
+        console.log("No user found");
+      }
+    }
+
+    fetchClasses();
+  }, [user, notebook, getAllLectureNames]);
 
   const getAbbreviatedDate = () => {
     const now = new Date();
@@ -45,32 +85,56 @@ export default function NotebookContent({ notebook, goBack }) {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (lectureToDelete) {
-      // Filter out the lecture to delete and update the state
-      const updatedLectures = lectures.filter((l) => l !== lectureToDelete);
-      setLectures(updatedLectures);
+      console.log(
+        String(user.uid),
+        String(notebook.classId),
+        String(lectureToDelete.lectureId)
+      );
+      try {
+        await deleteLecture(
+          String(user.uid),
+          String(notebook.classId),
+          String(lectureToDelete.lectureId)
+        );
+        // Filter out the lecture to delete and update the state
+        const updatedLectures = lectures.filter(
+          (l) => l.lectureId != lectureToDelete.lectureId
+        );
+        setLectures(updatedLectures);
 
-      // Reset states and close the dialog
-      setDeleteDialogOpen(false);
-      setLectureToDelete(null);
+        // Reset states and close the dialog
+        setDeleteDialogOpen(false);
+        setLectureToDelete(null);
+      } catch (error) {
+        console.error("Error deleting the lecture:", error);
+      }
     }
   };
 
   const handleCreateLecture = async () => {
     try {
-      const abbrevdate = getAbbreviatedDate();
-      const newLecture = { name: newLectureName, date: abbrevdate };
-
+      const lectureId = uuidv4();
+      const abbrevDate = getAbbreviatedDate();
+      const newLecture = {
+        lectureName: newLectureName,
+        status: "live",
+        lectureId: lectureId,
+        abbrevDate: abbrevDate,
+        className: notebook.name,
+        lectureId,
+      };
       await createLecture(
         String(user.uid),
         String(notebook.classId),
         notebook.name,
         newLectureName,
-        abbrevdate
+        abbrevDate,
+        lectureId
       ); // Create class
       console.log("Class created successfully"); // Debugging output
-      setLectures((prevLectures) => [...prevLectures, newLecture]);
+      setLectures((prevLectures) => [newLecture, ...prevLectures]);
 
       setIsDialogOpen(false);
       setNewLectureName("");
@@ -80,20 +144,29 @@ export default function NotebookContent({ notebook, goBack }) {
     }
   };
 
-  const handleRenameConfirm = () => {
+  const handleRenameConfirm = async () => {
     if (lectureToRename && renamedLectureName) {
-      // Update the lecture list with the new name
-      const updatedLectures = lectures.map((lecture) => {
-        if (lecture === lectureToRename) {
-          return { ...lecture, name: renamedLectureName };
-        }
-        return lecture;
-      });
-      setLectures(updatedLectures);
-      // Reset states and close the dialog
-      setRenameDialogOpen(false);
-      setLectureToRename(null);
-      setRenamedLectureName("");
+      try {
+        await editLectureName(
+          String(user.uid),
+          String(lectureToRename.classId),
+          String(lectureToRename.lectureId),
+          renamedLectureName
+        );
+        const updatedLectures = lectures.map((lecture) => {
+          if (lecture.lectureId === lectureToRename.lectureId) {
+            return { ...lecture, lectureName: renamedLectureName };
+          }
+          return lecture;
+        });
+        setLectures(updatedLectures);
+        // Reset states and close the dialog
+        setRenameDialogOpen(false);
+        setLectureToRename(null);
+        setRenamedLectureName("");
+      } catch (error) {
+        console.error("Error renaming the lecture:", error);
+      }
     }
   };
 
@@ -101,7 +174,6 @@ export default function NotebookContent({ notebook, goBack }) {
     event.stopPropagation();
     setMenuAnchorEl(null);
     setLectureToRename(lecture);
-    setRenamedLectureName(lecture.name);
     setRenameDialogOpen(true);
   };
 
@@ -127,12 +199,19 @@ export default function NotebookContent({ notebook, goBack }) {
     );
   }
 
-  const handleMenuClick = (event) => {
-    setMenuAnchorEl(event.currentTarget);
+  const handleMenuClick = (event, lecture) => {
+    event.stopPropagation();
+    if (menuAnchorEl === event.currentTarget) {
+      // If the current menu is already open for this notebook, close it
+      setMenuAnchorEl(null);
+    } else {
+      setSelectedMenuLecture(lecture);
+      setMenuAnchorEl(event.currentTarget);
+    }
   };
-
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
+    setSelectedMenuLecture(null);
   };
 
   const inlineStyles = {
@@ -248,18 +327,18 @@ export default function NotebookContent({ notebook, goBack }) {
             }}
             // Removed the onClick handler for the entire div to avoid opening the lecture when clicking the menu
           >
-            <div style={inlineStyles.lectureDate}>{lecture.date}</div>
+            <div style={inlineStyles.lectureDate}>{lecture.abbrevDate}</div>
             <div style={inlineStyles.lectureNameAndMenu}>
-              <div style={inlineStyles.lectureName}>{lecture.name}</div>
+              <div style={inlineStyles.lectureName}>{lecture.lectureName}</div>
               <MoreVertIcon
                 className="menu-item-nc"
-                onClick={handleMenuClick}
+                onClick={(e) => handleMenuClick(e, lecture)}
               />
             </div>
 
             <Menu
               anchorEl={menuAnchorEl}
-              open={openMenu}
+              open={openMenu && selectedMenuLecture === lecture}
               onClose={handleMenuClose}
               PaperProps={{
                 style: {
