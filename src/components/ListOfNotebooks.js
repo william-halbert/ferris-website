@@ -20,13 +20,8 @@ function ListOfNotebooks() {
   const [openNotebook, setOpenNotebook] = useState(null);
   const [color, setColor] = useState(null);
   const auth = getAuth();
-  const {
-    getUser,
-    createClass,
-    getAllClassNames,
-    deleteNotebook,
-    editNotebookName,
-  } = useAuth();
+  const { createClass, getAllClassNames, deleteNotebook, editNotebookName } =
+    useAuth();
   const user = auth.currentUser;
   const [inputClassName, setInputClassName] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -99,6 +94,7 @@ function ListOfNotebooks() {
     setNotebookToDelete(notebook);
     setDeleteDialogOpen(true);
   };
+
   const handleDeleteConfirm = async () => {
     if (notebookToDelete) {
       try {
@@ -122,6 +118,7 @@ function ListOfNotebooks() {
       }
     }
   };
+
   const [newNotebookName, setNewNotebookName] = useState("");
   const [notebooks, setNotebooks] = useState([{ name: "Add New" }]);
   const handleDialogOpen = () => {
@@ -202,7 +199,6 @@ function ListOfNotebooks() {
     "#A0C4FF",
     "#BDB2FF",
     "#FFC6FF",
-    "#FFFFFC",
     "#BEE9E8",
     "#F0B5B3",
     "#FF9AA2",
@@ -215,26 +211,7 @@ function ListOfNotebooks() {
   const handleGoBack = () => {
     setOpenNotebook(null);
   };
-  /*
-  const notebooks = [
-    { name: "Add New" },
 
-    
-    { name: "Calculus II", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Biology II", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Physics II", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Psychology", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Fluid Mechanics", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Solidworks", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Calculus II", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Biology II", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Physics II", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Psychology", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Fluid Mechanics", content: ["Lecture 1", "Lecture 2"] },
-    { name: "Solidworks", content: ["Lecture 1", "Lecture 2"] },
-
-    // ... any number of notebooks
-  ];*/
   const inlineStyles = {
     backpack: {
       display: "flex",

@@ -147,10 +147,7 @@ export function AuthProvider({ children }) {
         password
       );
       if (user) {
-        await createUser(user.uid, email);
-        await sendEmailVerification(user).then(
-          console.log("sent email verification")
-        );
+        await createUser(user.uid, email, "no_name", "no_url");
       }
     } catch (err) {
       return err.message;
@@ -268,6 +265,7 @@ export function AuthProvider({ children }) {
       console.error(e);
     }
   }
+
   async function createLecture(
     uid,
     classId,
@@ -295,6 +293,7 @@ export function AuthProvider({ children }) {
       console.error(e);
     }
   }
+
   async function createNote(uid, classId, className, noteTitle) {
     const docData = {
       userId: String(uid),

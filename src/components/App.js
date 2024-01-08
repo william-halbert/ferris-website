@@ -19,7 +19,6 @@ function App() {
           <AuthProvider>
             <Routes>
               <Route path="/" element={<Study />} />
-              <Route path="/notes" element={<ListOfNotebooks />} />
               <Route path="/auth" element={<Auth />} />
             </Routes>
           </AuthProvider>

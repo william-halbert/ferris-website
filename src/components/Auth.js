@@ -4,7 +4,7 @@ import convertibleBackground from "../images/convertible.png";
 import googleLogo from "../images/google.png";
 import { useAuth } from "../contexts/AuthContext";
 import { getAuth } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
   Nav,
@@ -25,6 +25,7 @@ export default function Auth() {
   const [password, setPassword] = useState(""); // State to hold the password
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const location = useLocation();
 
   const containerStyle = {
     position: "fixed",
@@ -45,18 +46,19 @@ export default function Auth() {
   useEffect(() => {
     async function authorize() {
       if (user) {
-        navigate("/"); // Navigate to the home route on success
+        navigate("/", { state: { from: "/auth" } });
       }
     }
     authorize();
   }, []);
+
   const handleGoogleSignIn = async () => {
     console.log("Attempting to sign in with Google");
     const response = await signInWithGoogle();
     if (response.success) {
       // Successfully signed in
       console.log("success");
-      navigate("/"); // Navigate to the home route on success
+      navigate("/", { state: { from: "/auth" } });
     } else {
       // Error occurred
       console.error(response.errorMessage);
@@ -105,7 +107,7 @@ export default function Auth() {
       if (response != "success") {
         return setError(response);
       } else {
-        navigate("/");
+        navigate("/", { state: { from: "/auth" } });
         setSuccess("You're logged in!");
       }
     } catch (err) {
@@ -120,7 +122,7 @@ export default function Auth() {
       if (response != "success") {
         return setError(response);
       } else {
-        navigate("/");
+        navigate("/", { state: { from: "/auth" } });
         return setSuccess("You're signed up!");
       }
     } catch (err) {

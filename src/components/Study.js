@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import BackpackImg from "../images/backpackBlue.png";
 import UnzippedImg from "../images/unzippedBackpackBlue.png";
 import { motion } from "framer-motion";
@@ -10,9 +10,10 @@ export default function Study() {
   const auth = getAuth();
   const user = auth.currentUser;
   const navigate = useNavigate();
-  const [needsAnimating, setNeedsAnimating] = useState(true); // Renamed for clarity
+  const [needsAnimating, setNeedsAnimating] = useState(false); // Renamed for clarity
   const [isAnimating, setIsAnimating] = useState(true);
   const [showNotebooks, setShowNotebooks] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     if (!user) {
@@ -32,8 +33,16 @@ export default function Study() {
         clearTimeout(timeoutId);
         clearTimeout(notebookTimeoutId);
       };
+    } else {
+      setShowNotebooks(true);
     }
   }, [user, navigate, needsAnimating]);
+
+  useEffect(() => {
+    if (location.state?.from === "/auth") {
+      setNeedsAnimating(true);
+    }
+  }, [location, navigate]);
 
   const backpackVariants = {
     centered: {
