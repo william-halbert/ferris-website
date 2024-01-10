@@ -247,10 +247,10 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  async function createClass(uid, className) {
+  async function createClass(email, className) {
     const classId = uuidv4();
     const docData = {
-      userId: String(uid),
+      email: String(email),
       className: className,
       createdDate: Timestamp.fromDate(new Date()),
       status: "live",
@@ -258,7 +258,7 @@ export function AuthProvider({ children }) {
     };
     try {
       const docRef = await setDoc(
-        doc(db, "users", uid, "classes", classId),
+        doc(db, "users", email, "classes", classId),
         docData
       );
     } catch (e) {
@@ -341,8 +341,8 @@ export function AuthProvider({ children }) {
     return docSnap.data();
   }
 
-  async function getAllClassNames(uid) {
-    const classesRef = collection(db, "users", uid, "classes");
+  async function getAllClassNames(email) {
+    const classesRef = collection(db, "users", email, "classes");
     const querySnapshot = await getDocs(classesRef);
 
     const classObjects = querySnapshot.docs.map((doc) => {

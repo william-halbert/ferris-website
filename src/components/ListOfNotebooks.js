@@ -19,6 +19,8 @@ function ListOfNotebooks() {
   const [hoveredNotebook, setHoveredNotebook] = useState(null);
   const [openNotebook, setOpenNotebook] = useState(null);
   const [color, setColor] = useState(null);
+  const [classId, setClassId] = useState(null);
+  const [myTitle, setMyTitle] = useState(null);
   const auth = getAuth();
   const { createClass, getAllClassNames, deleteNotebook, editNotebookName } =
     useAuth();
@@ -32,51 +34,49 @@ function ListOfNotebooks() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [notebookToRename, setNotebookToRename] = useState(null);
   const [renamedNotebookName, setRenamedNotebookName] = useState("");
+  const [newNotebookName, setNewNotebookName] = useState("");
+  const [notebooks, setNotebooks] = useState([]);
 
-  const handleRenameClick = (event, notebook) => {
+  const handleRenameClick = (event, fxnClassId, fxnTitle) => {
     event.stopPropagation();
+    setClassId(String(classId));
+    // console.log(classId);
     setMenuAnchorEl(null);
-    setNotebookToRename(notebook);
-    setRenamedNotebookName(notebook.name);
+    setRenamedNotebookName("");
     setRenameDialogOpen(true);
   };
 
   const handleRenameConfirm = async () => {
-    if (notebookToRename && renamedNotebookName) {
-      try {
-        // Call the editNotebookName function from your auth context
-        await editNotebookName(
-          String(user.uid),
-          String(notebookToRename.classId),
-          renamedNotebookName
-        );
+    try {
+      // Call the editNotebookName function from your auth context
+      await editNotebookName(
+        String(user.email),
+        String(classId),
+        renamedNotebookName
+      );
 
-        // Update the notebook name in the state
-        setNotebooks(
-          notebooks.map((n) =>
-            n.classId === notebookToRename.classId
-              ? { ...n, name: renamedNotebookName }
-              : n
-          )
-        );
-        setRenamedNotebookName("");
-        // Close the rename dialog
-        setRenameDialogOpen(false);
-        setNotebookToRename(null);
-      } catch (error) {
-        console.error("Error renaming the notebook:", error);
-        // Optionally, you can show an error message to the user
-      }
+      setNotebooks(
+        notebooks.map((n) =>
+          n.classId === classId ? { ...n, className: renamedNotebookName } : n
+        )
+      );
+
+      setRenamedNotebookName("");
+      // Close the rename dialog
+      setRenameDialogOpen(false);
+      setNotebookToRename(null);
+    } catch (error) {
+      console.log("Error renaming the notebook:", error);
+      // Optionally, you can show an error message to the user
     }
   };
 
-  const handleMenuClick = (event, notebook) => {
+  const handleMenuClick = (event, classId) => {
     event.stopPropagation();
     if (menuAnchorEl === event.currentTarget) {
-      // If the current menu is already open for this notebook, close it
       setMenuAnchorEl(null);
     } else {
-      // Otherwise, open the menu for this notebook
+      setClassId(classId);
       setMenuAnchorEl(event.currentTarget);
     }
   };
@@ -88,39 +88,34 @@ function ListOfNotebooks() {
     }
     setMenuAnchorEl(null);
   };
-  const handleDeleteClick = (event, notebook) => {
-    event.stopPropagation(); // Prevents event from bubbling up to parent elements
+
+  const handleDeleteClick = (event, fxnClassId) => {
+    event.stopPropagation();
+    setClassId(String(classId));
+    // console.log(classId);
     setMenuAnchorEl(null);
-    setNotebookToDelete(notebook);
+    setClassId(classId);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (notebookToDelete) {
-      try {
-        // Call the deleteNotebook function from your auth context
-        await deleteNotebook(
-          String(user.uid),
-          String(notebookToDelete.classId)
-        );
+    try {
+      // Call the deleteNotebook function from your auth context
 
-        // Filter out the deleted notebook and update the state
-        setNotebooks(
-          notebooks.filter((n) => n.classId !== notebookToDelete.classId)
-        );
+      await deleteNotebook(String(user.email), String(classId));
 
-        // Close the confirmation dialog
-        setDeleteDialogOpen(false);
-        setNotebookToDelete(null);
-      } catch (error) {
-        console.error("Error deleting the notebook:", error);
-        // Optionally, you can show an error message to the user
-      }
+      // Filter out the deleted notebook and update the state
+      setNotebooks(notebooks.filter((n) => n.classId !== classId));
+
+      // Close the confirmation dialog
+      setDeleteDialogOpen(false);
+      setNotebookToDelete(null);
+    } catch (error) {
+      console.error("Error deleting the notebook:", error);
+      // Optionally, you can show an error message to the user
     }
   };
 
-  const [newNotebookName, setNewNotebookName] = useState("");
-  const [notebooks, setNotebooks] = useState([{ name: "Add New" }]);
   const handleDialogOpen = () => {
     setIsDialogOpen(true);
   };
@@ -129,24 +124,27 @@ function ListOfNotebooks() {
   };
   const handleAddNewNotebook = () => {
     if (newNotebookName.trim()) {
-      setNotebooks([...notebooks, { name: newNotebookName }]);
+      setNotebooks([...notebooks, { className: newNotebookName }]);
       setNewNotebookName("");
     }
     handleDialogClose();
   };
 
+  useEffect(() => {
+    //console.log(notebooks);
+  }, [notebooks]);
   const handleCreateClass = async () => {
-    console.log("handleCreateClass called with:", newNotebookName); // Debugging output
-
     if (newNotebookName) {
       // Ensure we are using the correct state variable
       try {
-        await createClass(String(user.uid), newNotebookName); // Create class
+        console.log("handleCreateClass called with:", newNotebookName); // Debugging output
+        console.log(user.email);
+        await createClass(String(user.email), newNotebookName); // Create class
         console.log("Class created successfully"); // Debugging output
 
         setNotebooks((prevClasses) => [
           ...prevClasses,
-          { name: newNotebookName },
+          { className: newNotebookName },
         ]);
         setNewNotebookName(""); // Reset input field
         setIsDialogOpen(false); // Close dialog
@@ -158,23 +156,20 @@ function ListOfNotebooks() {
       console.log("No class name provided"); // Debugging output
     }
   };
+
   useEffect(() => {
     async function fetchClasses() {
       if (user) {
         try {
-          const userClasses = await getAllClassNames(user.uid);
-          console.log("Fetched classes:", userClasses);
+          const userClasses = await getAllClassNames(user.email);
+          //console.log("Fetched classes:", userClasses);
           if (userClasses && Array.isArray(userClasses)) {
             // Filter to only include "live" notebooks and prepend the "Add New" notebook
-            const liveNotebooks = userClasses
-              .filter((c) => c.status === "live") // Filter for live notebooks
-              .map((c) => ({
-                name: c.className,
-                status: c.status,
-                classId: c.classId,
-              }));
-
-            setNotebooks([{ name: "Add New" }, ...liveNotebooks]);
+            const liveNotebooks = userClasses.filter(
+              (c) => c.status === "live"
+            ); // Filter for live notebooks
+            //console.log("livenotebooks", liveNotebooks);
+            setNotebooks(liveNotebooks);
           } else {
             console.error("Invalid data format received");
           }
@@ -189,20 +184,6 @@ function ListOfNotebooks() {
     fetchClasses();
   }, [user, getAllClassNames]);
 
-  const colors = [
-    "white",
-    "#FFADAD",
-    "#FFD6A5",
-    "#FDFFB6",
-    "#CAFFBF",
-    "#9BF6FF",
-    "#A0C4FF",
-    "#BDB2FF",
-    "#FFC6FF",
-    "#BEE9E8",
-    "#F0B5B3",
-    "#FF9AA2",
-  ];
   const getNotebookStyle = (index) => ({
     ...inlineStyles.notebook,
     backgroundColor: colors[index % colors.length], // Cycle through colors
@@ -211,76 +192,6 @@ function ListOfNotebooks() {
   const handleGoBack = () => {
     setOpenNotebook(null);
   };
-
-  const inlineStyles = {
-    backpack: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      margin: "20px 100px",
-    },
-    notebooks: {
-      margin: "40px 200px 100px 20vw",
-      display: "flex",
-      justifyContent: "space-around",
-      alignItems: "center",
-      width: "70vw",
-      flexWrap: "wrap", // This allows the items to wrap to the next line
-      justifyContent: "flex-start",
-      gap: "100px",
-    },
-    notebook: {
-      border: "3px solid black",
-      padding: "10px",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      flexDirection: "column",
-      position: "relative",
-      cursor: "pointer",
-      minHeight: "200px",
-      width: "150px",
-      padding: "20px",
-    },
-    title: {
-      fontSize: "20px",
-      fontWeight: "bold",
-      margin: "5px 0",
-    },
-    icon: (id) => ({
-      position: "absolute",
-      top: "0px",
-      right: "5px",
-      display: hoveredNotebook === id ? "block" : "none",
-      cursor: "pointer",
-      fontSize: "30px",
-    }),
-    addIcon: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "36px",
-      fontWeight: "bold",
-      cursor: "pointer",
-      textAlign: "center",
-      position: "relative",
-      top: "-10px",
-    },
-
-    newNotebook: {
-      fontSize: "20px",
-      color: "black",
-      marginLeft: "8px",
-      fontWeight: "none",
-      margin: "0",
-    },
-    plus: { margin: "0" },
-  };
-  const notebooksWithColor = notebooks.map((notebook, index) => ({
-    ...notebook,
-    color: colors[index % colors.length],
-  }));
 
   return (
     <div>
@@ -297,83 +208,55 @@ function ListOfNotebooks() {
         }}
       />
       {openNotebook ? (
-        <NotebookContent notebook={openNotebook} goBack={handleGoBack} />
+        <NotebookContent
+          notebook={openNotebook}
+          goBack={handleGoBack}
+          classId={classId}
+        />
       ) : (
         <div style={inlineStyles.notebooks}>
-          {notebooks.map((notebook, index) => (
-            <div
-              style={getNotebookStyle(index)}
-              onMouseEnter={() => setHoveredNotebook(index)}
-              onMouseLeave={() => setHoveredNotebook(null)}
-              onClick={() => {
-                if (index !== 0) {
-                  setOpenNotebook({
-                    ...notebook,
-                    color: getNotebookStyle(index).backgroundColor,
-                  });
-                } else {
-                  // Only for the "Add New" notebook, display the button to open dialog
-                  handleDialogOpen();
-                }
+          <div
+            style={{
+              ...inlineStyles.notebook,
+              backgroundColor: "white", // Cycle through colors
+            }}
+            onClick={() => {
+              handleDialogOpen();
+            }}
+          >
+            <img
+              src={Spiral}
+              style={{
+                height: "180px",
+                position: "absolute",
+                top: "7px",
+                right: "55px",
               }}
-              key={notebook.classId || index}
-            >
-              <img
-                src={Spiral}
-                style={{
-                  height: "180px",
-                  position: "absolute",
-                  top: "7px",
-                  right: "55px",
-                }}
-              />
-              {index !== 0 && (
-                <>
-                  <MoreVertIcon
-                    className={`menu-icon ${
-                      hoveredNotebook === index ? "" : "hidden"
-                    }`}
-                    onClick={(e) => handleMenuClick(e, notebook)}
-                  />
-                  <Menu
-                    anchorEl={menuAnchorEl}
-                    open={openMenu}
-                    onClose={handleMenuClose}
-                    PaperProps={{
-                      style: {
-                        transform: "translate3d(0,0,0)", // Reset transform to default if needed
-                      },
-                    }}
-                  >
-                    <MenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRenameClick(e, notebook);
-                      }}
-                    >
-                      Rename
-                    </MenuItem>
-                    <MenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(e, notebook);
-                      }}
-                    >
-                      Delete
-                    </MenuItem>
-                  </Menu>
-                </>
-              )}
-              {index !== 0 && (
-                <span style={inlineStyles.title}>{notebook.name}</span>
-              )}
-              {index === 0 && (
-                <span style={inlineStyles.addIcon}>
-                  <span style={inlineStyles.plus}>+</span>
-                  <span style={inlineStyles.newNotebook}>New Notebook</span>
-                </span>
-              )}
-            </div>
+            />
+            <span style={inlineStyles.addIcon}>
+              <span style={inlineStyles.plus}>+</span>
+              <span style={inlineStyles.newNotebook}>New Notebook</span>
+            </span>
+          </div>
+
+          {notebooks.map((item, index) => (
+            <Notebook
+              setClassId={setClassId}
+              classId={item.classId}
+              title={item.className}
+              handleRenameClick={handleRenameClick}
+              handleDeleteClick={handleDeleteClick}
+              openMenu={openMenu}
+              handleMenuClose={handleMenuClose}
+              handleMenuClick={handleMenuClick}
+              getNotebookStyle={getNotebookStyle}
+              index={index}
+              menuAnchorEl={menuAnchorEl}
+              setMenuAnchorEl={setMenuAnchorEl}
+              setMyTitle={setMyTitle}
+              setOpenNotebook={setOpenNotebook}
+              item={item}
+            />
           ))}
         </div>
       )}
@@ -391,6 +274,7 @@ function ListOfNotebooks() {
             variant="outlined"
             value={newNotebookName}
             onChange={(e) => setNewNotebookName(e.target.value)}
+            autoComplete="off"
           />
         </DialogContent>
         <DialogActions>
@@ -427,6 +311,7 @@ function ListOfNotebooks() {
             variant="outlined"
             value={renamedNotebookName}
             onChange={(e) => setRenamedNotebookName(e.target.value)}
+            autoComplete="off"
           />
         </DialogContent>
         <DialogActions>
@@ -439,3 +324,169 @@ function ListOfNotebooks() {
 }
 
 export default ListOfNotebooks;
+
+const Notebook = ({
+  setClassId,
+  classId,
+  title,
+  handleRenameClick,
+  handleDeleteClick,
+  openMenu,
+  handleMenuClose,
+  handleMenuClick,
+  index,
+  menuAnchorEl,
+  setMenuAnchorEl,
+  setMyTitle,
+  setOpenNotebook,
+  item,
+}) => {
+  const getNotebookStyle = (index) => ({
+    ...inlineStyles.notebook,
+    backgroundColor: colors[index % colors.length], // Cycle through colors
+  });
+
+  return (
+    <div
+      style={getNotebookStyle(index)}
+      onClick={() => {
+        setClassId(classId);
+        setOpenNotebook(item);
+      }}
+      key={classId}
+    >
+      <img
+        src={Spiral}
+        style={{
+          height: "180px",
+          position: "absolute",
+          top: "7px",
+          right: "55px",
+        }}
+      />
+
+      <MoreVertIcon
+        className={`menu-icon hidden`}
+        onClick={(e) => handleMenuClick(e, classId)}
+      />
+
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={openMenu}
+        onClose={handleMenuClose}
+        PaperProps={{
+          style: {
+            boxShadow: "0px 10px 15px rgba(0,0,0,.15)", // Apply the subtle box shadow
+            transform: "translate3d(0,0,0)", // Reset transform to default if needed
+          },
+        }}
+      >
+        <MenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            setClassId(classId);
+            console.log(title);
+            setMyTitle(title);
+            handleRenameClick(e, classId, title);
+          }}
+        >
+          Rename
+        </MenuItem>
+        <MenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            setClassId(classId);
+            console.log(title);
+            setMyTitle(title);
+            handleDeleteClick(e, classId);
+          }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
+
+      <span style={inlineStyles.title}>{title}</span>
+    </div>
+  );
+};
+
+const inlineStyles = {
+  backpack: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    margin: "20px 100px",
+  },
+  notebooks: {
+    margin: "40px 200px 100px 20vw",
+    display: "flex",
+    justifyContent: "space-around",
+    alignItems: "center",
+    width: "70vw",
+    flexWrap: "wrap", // This allows the items to wrap to the next line
+    justifyContent: "flex-start",
+    gap: "100px",
+  },
+  notebook: {
+    border: "3px solid black",
+    padding: "10px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "column",
+    position: "relative",
+    cursor: "pointer",
+    minHeight: "200px",
+    width: "150px",
+    padding: "20px",
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: "bold",
+    margin: "5px 0",
+    textAlign: "center",
+  },
+  icon: (id) => ({
+    position: "absolute",
+    top: "0px",
+    right: "5px",
+    display: "none",
+    cursor: "pointer",
+    fontSize: "30px",
+  }),
+  addIcon: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "36px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    textAlign: "center",
+    position: "relative",
+    top: "-10px",
+  },
+
+  newNotebook: {
+    fontSize: "20px",
+    color: "black",
+    marginLeft: "8px",
+    fontWeight: "none",
+    margin: "0",
+  },
+  plus: { margin: "0" },
+};
+
+const colors = [
+  "#FFADAD",
+  "#FFD6A5",
+  "#FDFFB6",
+  "#CAFFBF",
+  "#9BF6FF",
+  "#A0C4FF",
+  "#BDB2FF",
+  "#FFC6FF",
+  "#BEE9E8",
+  "#F0B5B3",
+  "#FF9AA2",
+];

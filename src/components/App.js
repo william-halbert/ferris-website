@@ -4,7 +4,7 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Study from "./Study";
 import Auth from "./Auth";
-import ListOfNotebooks from "./ListOfNotebooks";
+import Lecture from "./Lecture";
 
 function App() {
   return (
@@ -20,6 +20,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Study />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/lecture" element={<Lecture />} />
             </Routes>
           </AuthProvider>
         </Router>

@@ -14,7 +14,8 @@ import { Menu, MenuItem } from "@mui/material";
 import "./NotebookContent.css";
 import { v4 as uuidv4 } from "uuid";
 
-export default function NotebookContent({ notebook, goBack }) {
+export default function NotebookContent({ notebook, goBack, classId }) {
+  const [lectureId, setLectureId] = useState(null);
   const [selectedLecture, setSelectedLecture] = useState(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const openMenu = Boolean(menuAnchorEl);
@@ -31,14 +32,16 @@ export default function NotebookContent({ notebook, goBack }) {
   const auth = getAuth();
   const user = auth.currentUser;
   const [selectedMenuLecture, setSelectedMenuLecture] = useState(null);
+  console.log(notebook);
+  console.log(classId);
 
   useEffect(() => {
     async function fetchClasses() {
       if (user) {
         try {
           const userLectures = await getAllLectureNames(
-            user.uid,
-            notebook.classId
+            String(user.email),
+            String(notebook.classId)
           );
           console.log("Fetched lectures:", userLectures);
           if (userLectures && Array.isArray(userLectures)) {
@@ -52,6 +55,7 @@ export default function NotebookContent({ notebook, goBack }) {
                 abbrevDate: l.abbrevDate,
                 className: l.className,
                 classId: l.classId,
+                rawNotesId: l.rawNotesId,
               }));
 
             setLectures([...liveLectures]);
@@ -80,36 +84,28 @@ export default function NotebookContent({ notebook, goBack }) {
 
   const handleDeleteClick = (event, lecture) => {
     event.stopPropagation(); // Prevents event from bubbling up to parent elements
+    setLectureId(String(lectureId));
     setMenuAnchorEl(null);
     setLectureToDelete(lecture);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (lectureToDelete) {
-      console.log(
-        String(user.uid),
+    try {
+      await deleteLecture(
+        String(user.email),
         String(notebook.classId),
         String(lectureToDelete.lectureId)
       );
-      try {
-        await deleteLecture(
-          String(user.uid),
-          String(notebook.classId),
-          String(lectureToDelete.lectureId)
-        );
-        // Filter out the lecture to delete and update the state
-        const updatedLectures = lectures.filter(
-          (l) => l.lectureId != lectureToDelete.lectureId
-        );
-        setLectures(updatedLectures);
+      // Filter out the lecture to delete and update the state
+      const updatedLectures = lectures.filter((l) => l.lectureId != lectureId);
+      setLectures(updatedLectures);
 
-        // Reset states and close the dialog
-        setDeleteDialogOpen(false);
-        setLectureToDelete(null);
-      } catch (error) {
-        console.error("Error deleting the lecture:", error);
-      }
+      // Reset states and close the dialog
+      setDeleteDialogOpen(false);
+      setLectureToDelete(null);
+    } catch (error) {
+      console.error("Error deleting the lecture:", error);
     }
   };
 
@@ -145,33 +141,36 @@ export default function NotebookContent({ notebook, goBack }) {
   };
 
   const handleRenameConfirm = async () => {
-    if (lectureToRename && renamedLectureName) {
-      try {
-        await editLectureName(
-          String(user.uid),
-          String(lectureToRename.classId),
-          String(lectureToRename.lectureId),
-          renamedLectureName
-        );
-        const updatedLectures = lectures.map((lecture) => {
-          if (lecture.lectureId === lectureToRename.lectureId) {
-            return { ...lecture, lectureName: renamedLectureName };
-          }
-          return lecture;
-        });
-        setLectures(updatedLectures);
-        // Reset states and close the dialog
-        setRenameDialogOpen(false);
-        setLectureToRename(null);
-        setRenamedLectureName("");
-      } catch (error) {
-        console.error("Error renaming the lecture:", error);
-      }
+    try {
+      await editLectureName(
+        String(user.email),
+        String(classId),
+        String(lectureId),
+        renamedLectureName
+      );
+      console.log(lectures);
+      const updatedLectures = lectures.map((lecture) => {
+        if (lecture.lectureId == lectureId) {
+          return { ...lecture, lectureName: renamedLectureName };
+        }
+
+        return lecture;
+      });
+      console.log(updatedLectures);
+
+      setLectures(updatedLectures);
+      // Reset states and close the dialog
+      setRenameDialogOpen(false);
+      setLectureToRename(null);
+      setRenamedLectureName("");
+    } catch (error) {
+      console.error("Error renaming the lecture:", error);
     }
   };
 
   const handleRenameClick = (event, lecture) => {
     event.stopPropagation();
+    console.log("lectureId", lectureId);
     setMenuAnchorEl(null);
     setLectureToRename(lecture);
     setRenameDialogOpen(true);
@@ -309,6 +308,18 @@ export default function NotebookContent({ notebook, goBack }) {
     },
   };
 
+  const handleLectureNavigation = (fxnLectureId) => {
+    const params = {
+      c: classId,
+      l: fxnLectureId,
+      // Add more parameters as needed
+    };
+    const queryString = new URLSearchParams(params).toString();
+    const url = `/lecture?${queryString}`;
+
+    window.open(url, "_blank");
+  };
+
   return (
     <div style={inlineStyles.lectureGrid}>
       <div
@@ -325,14 +336,23 @@ export default function NotebookContent({ notebook, goBack }) {
             style={{
               ...inlineStyles.lectureItem,
             }}
-            // Removed the onClick handler for the entire div to avoid opening the lecture when clicking the menu
+            onClick={() => {
+              setLectureId(lecture.lectureId);
+              setTimeout(() => {
+                handleLectureNavigation(lecture.lectureId);
+              }, 50);
+            }}
           >
             <div style={inlineStyles.lectureDate}>{lecture.abbrevDate}</div>
             <div style={inlineStyles.lectureNameAndMenu}>
               <div style={inlineStyles.lectureName}>{lecture.lectureName}</div>
               <MoreVertIcon
                 className="menu-item-nc"
-                onClick={(e) => handleMenuClick(e, lecture)}
+                onClick={(e) => {
+                  setLectureId(lecture.lectureId);
+                  console.log(lecture.lectureId);
+                  handleMenuClick(e, lecture);
+                }}
               />
             </div>
 
@@ -350,6 +370,8 @@ export default function NotebookContent({ notebook, goBack }) {
               <MenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  setLectureId(lecture.lectureId);
+                  console.log(lecture.lectureId);
                   handleRenameClick(e, lecture);
                 }}
               >
@@ -358,6 +380,8 @@ export default function NotebookContent({ notebook, goBack }) {
               <MenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  setLectureId(lecture.lectureId);
+                  console.log(lecture.lectureId);
                   handleDeleteClick(e, lecture);
                 }}
               >
@@ -379,6 +403,7 @@ export default function NotebookContent({ notebook, goBack }) {
             variant="outlined"
             value={newLectureName}
             onChange={(e) => setNewLectureName(e.target.value)}
+            autoComplete="off"
           />
         </DialogContent>
         <DialogActions>
@@ -402,6 +427,7 @@ export default function NotebookContent({ notebook, goBack }) {
             variant="outlined"
             value={renamedLectureName}
             onChange={(e) => setRenamedLectureName(e.target.value)}
+            autoComplete="off"
           />
         </DialogContent>
         <DialogActions>
