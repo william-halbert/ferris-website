@@ -80,7 +80,7 @@ export default function Study() {
             animate={isAnimating ? "centered" : "topLeft"}
             variants={backpackVariants}
             style={{ maxWidth: "80vw", maxHeight: "80vh" }}
-          />{" "}
+          />
         </div>
       ) : showNotebooks ? (
         <ListOfNotebooks />

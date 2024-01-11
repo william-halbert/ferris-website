@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getAuth } from "firebase/auth";
@@ -16,10 +16,6 @@ export default function Lecture() {
   const searchParams = new URLSearchParams(location.search);
   const classId = searchParams.get("c");
   const lectureId = searchParams.get("l");
-
-  const [pages, setPages] = useState([]); // State to hold pages
-  const contentRef = useRef(null); // Ref to measure content height
-  const PAGE_HEIGHT = 11.5 * 96; // 11.5 inches in pixels (assuming 96 DPI)
 
   useEffect(() => {
     const fetchNotes = async (rawNotesIdFxn) => {
@@ -75,51 +71,6 @@ export default function Lecture() {
     fetchLecture();
   }, [user]);
 
-  useEffect(() => {
-    if (rawNotes && Array.isArray(rawNotes)) {
-      let newPages = [];
-      let currentPage = [];
-      let currentPageHeight = 0;
-
-      rawNotes.forEach((note, index) => {
-        const noteHeight = calculateNoteHeight(note); // Implement this function based on note type
-        if (currentPageHeight + noteHeight <= PAGE_HEIGHT) {
-          currentPage.push(note);
-          currentPageHeight += noteHeight;
-        } else {
-          newPages.push(currentPage);
-          currentPage = [note];
-          currentPageHeight = noteHeight;
-        }
-      });
-
-      if (currentPage.length > 0) {
-        newPages.push(currentPage);
-      }
-
-      setPages(newPages);
-    }
-  }, [rawNotes]);
-
-  const renderPageContent = (pageContent) => {
-    return pageContent.map((note, index) => renderNoteContent(note, index));
-  };
-
-  function calculateNoteHeight(note) {
-    const BASE_HEIGHT = 24; // Base height for a single line of text
-    let height = 0;
-
-    if (note.whatToShow === "text") {
-      note.textArray.forEach((item) => {
-        height += BASE_HEIGHT; // Add height for the header
-        height += item.points.length * BASE_HEIGHT; // Add height for each bullet point
-      });
-    } else if (note.whatToShow === "image") {
-      height = 300; // Assuming a fixed height for images, can be adjusted as needed
-    }
-
-    return height;
-  }
   const renderNoteContent = (rawNote, rawNoteIndex) => {
     if (rawNote.whatToShow === "text") {
       return (
@@ -156,11 +107,15 @@ export default function Lecture() {
     <div style={inlineStyles.container}>
       <div style={inlineStyles.header}>{lectureNameDisplay}</div>
       <div style={inlineStyles.pageContainer}>
-        {pages.map((pageContent, pageIndex) => (
-          <div key={`page-${pageIndex}`} style={inlineStyles.page}>
-            {renderPageContent(pageContent)}
-          </div>
-        ))}
+        {/* Render pages here. You can map over an array of page data if they are dynamic */}
+        <div style={inlineStyles.page}>
+          {rawNotes && Array.isArray(rawNotes) ? (
+            rawNotes.map(renderNoteContent)
+          ) : (
+            <p>Start taking notes!</p>
+          )}
+        </div>
+        {/* Add more pages as needed */}
       </div>
     </div>
   );
@@ -200,7 +155,6 @@ const inlineStyles = {
     marginBottom: "20px",
     display: "flex",
     flexDirection: "column",
-    marginBottom: "40px",
   },
   section: {
     marginBottom: "20px",

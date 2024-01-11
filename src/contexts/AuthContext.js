@@ -424,6 +424,48 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function getLecture(email, classId, lectureId) {
+    const docRef = doc(
+      db,
+      "users",
+      email,
+      "classes",
+      classId,
+      "lectures",
+      lectureId
+    );
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such document!");
+    }
+    return docSnap.data();
+  }
+
+  async function getRawNotes(email, classId, lectureId, rawNoteId) {
+    const docRef = doc(
+      db,
+      "users",
+      email,
+      "classes",
+      classId,
+      "lectures",
+      lectureId,
+      "rawNotes",
+      rawNoteId
+    );
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such document!");
+    }
+    return docSnap.data();
+  }
+
   const value = {
     editNotebookName,
     signup,
@@ -448,6 +490,8 @@ export function AuthProvider({ children }) {
     getAllLectureNames,
     deleteLecture,
     editLectureName,
+    getLecture,
+    getRawNotes,
   };
 
   return (

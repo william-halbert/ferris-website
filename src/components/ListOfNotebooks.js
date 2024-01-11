@@ -133,6 +133,7 @@ function ListOfNotebooks() {
   useEffect(() => {
     //console.log(notebooks);
   }, [notebooks]);
+
   const handleCreateClass = async () => {
     if (newNotebookName) {
       // Ensure we are using the correct state variable
