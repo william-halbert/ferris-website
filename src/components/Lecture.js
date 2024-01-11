@@ -73,6 +73,12 @@ export default function Lecture() {
       }
     };
     fetchLecture();
+
+    const intervalId = setInterval(() => {
+      fetchLecture();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
   }, [user]);
 
   useEffect(() => {
