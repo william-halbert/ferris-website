@@ -185,6 +185,9 @@ const inlineStyles = {
     overflow: "auto",
   },
   header: {
+    position: "fixed",
+    top: "0",
+    width: "100vw",
     backgroundColor: "#ffffff",
     borderBottom: "1px solid #ddd",
     padding: "10px 20px",
@@ -193,11 +196,11 @@ const inlineStyles = {
     textAlign: "center",
   },
   pageContainer: {
-    marginTop: "20px",
+    marginTop: "110px",
   },
   page: {
     backgroundColor: "#ffffff",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    boxShadow: "0 6px 8px rgba(0,0,0,0.3)",
     margin: "0 auto",
     padding: "40px",
     width: "8.5in",
@@ -206,7 +209,7 @@ const inlineStyles = {
     marginBottom: "20px",
     display: "flex",
     flexDirection: "column",
-    marginBottom: "40px",
+    marginBottom: "80px",
   },
   section: {
     marginBottom: "20px",
@@ -214,16 +217,17 @@ const inlineStyles = {
   headerNotes: {
     color: "black",
     fontWeight: "bold",
-    fontSize: "20px",
+    fontSize: "18px",
     marginBottom: "10px",
   },
   bulletPoint: {
     color: "black",
-    fontSize: "18px",
+    fontSize: "16px",
     marginBottom: "5px",
   },
   imageStyle: {
     maxWidth: "80%",
+    maxHeight: "600px",
     alignSelf: "center",
     marginBottom: "20px",
     alignSelf: "center",

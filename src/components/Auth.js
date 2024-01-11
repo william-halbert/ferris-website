@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Auth.css";
-import convertibleBackground from "../images/convertible.png";
+import convertibleBackground from "../images/pink.png";
 import googleLogo from "../images/google.png";
 import { useAuth } from "../contexts/AuthContext";
 import { getAuth } from "firebase/auth";
