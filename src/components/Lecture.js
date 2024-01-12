@@ -118,7 +118,11 @@ export default function Lecture() {
     if (note.whatToShow === "text") {
       note.textArray.forEach((item) => {
         height += BASE_HEIGHT; // Add height for the header
-        height += item.points.length * BASE_HEIGHT; // Add height for each bullet point
+
+        // Check if item.points is defined and has elements
+        if (item.points && item.points.length > 0) {
+          height += item.points.length * BASE_HEIGHT; // Add height for each bullet point
+        }
       });
     } else if (note.whatToShow === "image") {
       height = 300; // Assuming a fixed height for images, can be adjusted as needed
@@ -126,6 +130,7 @@ export default function Lecture() {
 
     return height;
   }
+
   const renderNoteContent = (rawNote, rawNoteIndex) => {
     if (rawNote.whatToShow === "text") {
       return (
@@ -133,14 +138,18 @@ export default function Lecture() {
           {rawNote.textArray.map((item, index) => (
             <React.Fragment key={`note-${rawNoteIndex}-text-${index}`}>
               <h2 style={inlineStyles.headerNotes}>{item.header}</h2>
-              {item.points.map((point, idx) => (
-                <p
-                  key={`note-${rawNoteIndex}-text-${index}-point-${idx}`}
-                  style={inlineStyles.bulletPoint}
-                >
-                  • {point}
-                </p>
-              ))}
+              {item.points && item.points.length > 0 ? (
+                item.points.map((point, idx) => (
+                  <p
+                    key={`note-${rawNoteIndex}-text-${index}-point-${idx}`}
+                    style={inlineStyles.bulletPoint}
+                  >
+                    • {point}
+                  </p>
+                ))
+              ) : (
+                <p style={inlineStyles.bulletPoint}>No points available</p>
+              )}
             </React.Fragment>
           ))}
         </div>
