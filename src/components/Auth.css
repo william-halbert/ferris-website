@@ -143,6 +143,10 @@
     padding-top: 20%; /* Add some top padding on mobile */
   }
 
+  .WelcomeBack {
+    margin-bottom: 10px;
+  }
+
   .auth-modal {
     width: 90%; /* Make the modal take up most of the screen width on mobile */
     margin: 0 auto; /* Center the modal */
@@ -150,26 +154,34 @@
 
   .auth-google-btn,
   .auth-alt-btn {
-    font-size: 14px; /* Slightly smaller font size on mobile */
+    font-size: 18px; /* Slightly smaller font size on mobile */
     padding: 10px 20px; /* Adjust padding for smaller screens */
   }
 
   .auth-google-btn {
     margin-top: 16px;
-    margin-bottom: 8px; /* Reduce spacing on mobile */
+    margin-bottom: 10px; /* Reduce spacing on mobile */
   }
 
   .auth-alt-btn {
     margin-bottom: 0; /* Reduce spacing on mobile */
+    font-size: 16px;
   }
 
   .auth-terms {
     margin-top: 16px; /* Reduce spacing on mobile */
-    font-size: 12px; /* Smaller font size for terms on mobile */
+    font-size: 14px; /* Smaller font size for terms on mobile */
   }
 
   h2 {
     font-size: 20px; /* Smaller heading on mobile */
+  }
+  .h2-email {
+    margin-bottom: 10px;
+  }
+  .back-button {
+    margin-bottom: 10px;
+    font-size: 24px;
   }
 }
 

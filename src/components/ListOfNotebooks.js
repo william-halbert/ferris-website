@@ -1,5 +1,8 @@
-import { AirlineSeatReclineNormalRounded } from "@mui/icons-material";
-import React, { useState, useEffect } from "react";
+import {
+  AirlineSeatReclineNormalRounded,
+  Navigation,
+} from "@mui/icons-material";
+import React, { useState, useEffect, useRef } from "react";
 import Spiral from "../images/spiral.png";
 import { useAuth } from "../contexts/AuthContext";
 import { getAuth } from "firebase/auth";
@@ -14,6 +17,7 @@ import Button from "@mui/material/Button";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { Menu, MenuItem } from "@mui/material";
 import "./ListOfNotebooks.css";
+import { useNavigate } from "react-router-dom";
 
 function ListOfNotebooks() {
   const [hoveredNotebook, setHoveredNotebook] = useState(null);
@@ -22,8 +26,15 @@ function ListOfNotebooks() {
   const [classId, setClassId] = useState(null);
   const [myTitle, setMyTitle] = useState(null);
   const auth = getAuth();
-  const { createClass, getAllClassNames, deleteNotebook, editNotebookName } =
-    useAuth();
+  const navigate = useNavigate();
+
+  const {
+    createClass,
+    getAllClassNames,
+    deleteNotebook,
+    editNotebookName,
+    logout,
+  } = useAuth();
   const user = auth.currentUser;
   const [inputClassName, setInputClassName] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -36,6 +47,11 @@ function ListOfNotebooks() {
   const [renamedNotebookName, setRenamedNotebookName] = useState("");
   const [newNotebookName, setNewNotebookName] = useState("");
   const [notebooks, setNotebooks] = useState([]);
+  const [userMenuAnchorEl, setUserMenuAnchorEl] = useState(null);
+  const openUserMenu = Boolean(userMenuAnchorEl);
+  const menuRef = useRef(null);
+
+  console.log("user,", user);
 
   const handleRenameClick = (event, fxnClassId, fxnTitle) => {
     event.stopPropagation();
@@ -87,6 +103,27 @@ function ListOfNotebooks() {
       event.stopPropagation();
     }
     setMenuAnchorEl(null);
+  };
+
+  const handleUserMenuClick = (event) => {
+    event.stopPropagation();
+    if (menuRef.current) {
+      menuRef.current.focus();
+    }
+    if (userMenuAnchorEl === event.currentTarget) {
+      setUserMenuAnchorEl(null);
+    } else {
+      // setClassId(classId);
+      setUserMenuAnchorEl(event.currentTarget);
+    }
+  };
+
+  const handleUserMenuClose = (event) => {
+    // Check if the event exists and stop propagation
+    if (event) {
+      event.stopPropagation();
+    }
+    setUserMenuAnchorEl(null);
   };
 
   const handleDeleteClick = (event, fxnClassId) => {
@@ -208,6 +245,66 @@ function ListOfNotebooks() {
           cursor: "pointer",
         }}
       />
+
+      {user && user.photoURL ? (
+        <img
+          src={user.photoURL}
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            height: "60px",
+            width: "60px",
+            cursor: "pointer",
+            borderRadius: "50px",
+          }}
+          onClick={handleUserMenuClick}
+        />
+      ) : (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            height: "60px",
+            width: "60px",
+            cursor: "pointer",
+            borderRadius: "50px",
+            backgroundColor: "#FF008F",
+          }}
+          onClick={handleUserMenuClick}
+        >
+          <h1> </h1>
+        </div>
+      )}
+      <Menu
+        anchorEl={userMenuAnchorEl}
+        open={openUserMenu}
+        onClose={handleUserMenuClose}
+        PaperProps={{
+          style: {
+            boxShadow: "0px 10px 15px rgba(0,0,0,.15)", // Apply the subtle box shadow
+            transform: "translate3d(0,0,0)", // Reset transform to default if needed
+          },
+        }}
+      >
+        <MenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log("logout");
+            logout();
+            navigate("/auth");
+
+            /*  setClassId(classId);
+            console.log(title);
+            setMyTitle(title);
+            handleRenameClick(e, classId, title);*/
+          }}
+        >
+          Log Out
+        </MenuItem>
+      </Menu>
+
       {openNotebook ? (
         <NotebookContent
           notebook={openNotebook}
@@ -419,7 +516,7 @@ const inlineStyles = {
     margin: "20px 100px",
   },
   notebooks: {
-    margin: "40px 200px 100px 20vw",
+    margin: "80px 200px 100px 20vw",
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
