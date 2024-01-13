@@ -271,10 +271,20 @@ function ListOfNotebooks() {
             cursor: "pointer",
             borderRadius: "50px",
             backgroundColor: "#FF008F",
+            display: "flex",
+            color: "white",
+            alignItems: "center",
+            justifyContent: "center",
+
+            padding: "0",
           }}
           onClick={handleUserMenuClick}
         >
-          <h1> </h1>
+          {user && (
+            <h1 style={{ margin: "0", padding: "0", fontSize: "34px" }}>
+              {user.email[0].toUpperCase()}
+            </h1>
+          )}
         </div>
       )}
       <Menu
