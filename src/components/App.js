@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Study from "./Study";
 import Auth from "./Auth";
 import Lecture from "./Lecture";
+import Editor from "./Editor";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
               <Route path="/" element={<Study />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/lecture" element={<Lecture />} />
+              <Route path="/editor" element={<Editor />} />
             </Routes>
           </AuthProvider>
         </Router>

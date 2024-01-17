@@ -466,6 +466,88 @@ export function AuthProvider({ children }) {
     return docSnap.data();
   }
 
+  async function getStyledNotes(email, classId, lectureId, styledNotesId) {
+    const docRef = doc(
+      db,
+      "users",
+      email,
+      "classes",
+      classId,
+      "lectures",
+      lectureId,
+      "styledNotes",
+      styledNotesId
+    );
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+    } else {
+      // docSnap.data() will be undefined in this case
+      console.log("No such document!");
+    }
+    return docSnap.data();
+  }
+
+  async function createStyledNotes(email, classId, lectureId, styledNotesId) {
+    try {
+      const docData = {
+        email: String(email),
+        classId: String(classId),
+        lectureId: String(lectureId),
+      };
+      const docRef = await setDoc(
+        doc(
+          db,
+          "users",
+          email,
+          "classes",
+          classId,
+          "lectures",
+          lectureId,
+          "styledNotes",
+          styledNotesId
+        ),
+        docData
+      );
+      console.log("successful raw notes creation");
+      return "success";
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function saveStyledNotes(
+    email,
+    classId,
+    lectureId,
+    styledNotesId,
+    notes
+  ) {
+    try {
+      await setDoc(
+        doc(
+          db,
+          "users",
+          email,
+          "classes",
+          classId,
+          "lectures",
+          lectureId,
+          "styledNotes",
+          styledNotesId
+        ),
+        {
+          notes: notes,
+        },
+        { merge: true }
+      );
+      return "success";
+    } catch (error) {
+      console.error("Error saving transcript to Firestore: ", error);
+    }
+    return null;
+  }
+
   const value = {
     editNotebookName,
     signup,
@@ -492,6 +574,9 @@ export function AuthProvider({ children }) {
     editLectureName,
     getLecture,
     getRawNotes,
+    getStyledNotes,
+    createStyledNotes,
+    saveStyledNotes,
   };
 
   return (
